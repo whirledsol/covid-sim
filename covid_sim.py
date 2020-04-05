@@ -31,8 +31,8 @@ FORMULAE = {
 
 
 def start():
-    PATH_BASE = '/home/will/Projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series'
-    OUTPUT_BASE = '/home/will/Projects/PythonUtilities/covid-sim/out/'
+    PATH_BASE = os.path.expanduser('~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series')
+    OUTPUT_BASE = './out/'
     PATH_TIME_CONFIRMED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
     PATH_TIME_DEATHS_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_deaths_global.csv')
     PATH_TIME_RECOVERY_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_recovered_global.csv')
@@ -66,7 +66,6 @@ def custom_trend_us(path,state,label):
     x,y = parse_time_us(path,state)
     y = [v for v in y if v>100]
     x = x[-len(y):]
-    print(x)
     dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
     dy2 = [0]+[dy[i]-dy[i-1] for i,v in enumerate(dy) if i>0]
 
@@ -96,10 +95,10 @@ def custom_deathrate_global(path,deathpath):
         cpersent[country] = max(y)/population
         drates[country] = latest
     
-    print('|Country\t\t\t|Percent Infected|Death Rate|')
-    print('|---\t\t\t|------:|------:|')
+    print('|Country|Percent Infected|Death Rate|')
+    print('|---|------:|------:|')
     for country,rate in sorted(drates.items(), key=(lambda item: item[1]), reverse=True):
-        print('|{0}\t\t\t|{1:0.3f}|{2:0.3f}|'.format(country,cpersent[country],rate))
+        print('|{0}|{1:0.3f}|{2:0.3f}|'.format(country,cpersent[country],rate))
     print('\n')
 
 def custom_recovery_us(path,recoverypath,important_states):

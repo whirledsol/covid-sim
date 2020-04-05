@@ -74,7 +74,7 @@ class SirLearner(object):
         fig, ax = plt.subplots(figsize=(15, 10))
         ax.set_title(self.country)
         df.plot(ax=ax)
-        fig.savefig(f"{self.country}.png")
+        fig.savefig(f"./out/{self.country}.png")
 
 def loss(point, data):
     """
@@ -91,6 +91,6 @@ def loss(point, data):
     return np.sqrt(np.mean((solution.y[1] - data)**2))
 
 
-PATH_BASE = '/home/will/Projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series'
-PATH_TIME_CONFIRMED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
+PATH_BASE = '~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series'
+PATH_TIME_CONFIRMED_GLOBAL = os.path.expanduser(os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv'))
 SirLearner(PATH_TIME_CONFIRMED_GLOBAL,'US',loss)
