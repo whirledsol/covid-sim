@@ -10,6 +10,12 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from datetime import timedelta, datetime
 
+def start():
+    PATH_BASE = os.path.expanduser('~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series')
+    PATH_TIME_CONFIRMED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
+    learner = SirLearner(PATH_TIME_CONFIRMED_GLOBAL,'US',loss)
+    learner.train()
+
 class SirLearner(object):
     def __init__(self, path, country, loss):
         self.path = path
@@ -23,8 +29,6 @@ class SirLearner(object):
       df = pd.read_csv(self.path)
       country_df = df[df['Country/Region'] == country]
       results = country_df.iloc[0].loc['1/22/20':]
-      print(results)
-      exit()
       return results
 
     def extend_index(self, index, new_size):
@@ -49,7 +53,8 @@ class SirLearner(object):
             R = y[2]
             return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
         extended_actual = np.concatenate((data.values, [None] * (size - len(data.values))))
-        return new_index, extended_actual, solve_ivp(SIR, [0, size], [S_0,I_0,R_0], t_eval=np.arange(0, size, 1))
+        initial = [0,1,0] #[S_0,I_0,R_0]
+        return new_index, extended_actual, solve_ivp(SIR, [0, size], initial, t_eval=np.arange(0, size, 1))
 
     def train(self):
         """
@@ -64,6 +69,7 @@ class SirLearner(object):
             bounds=[(0.00000001, 0.4), (0.00000001, 0.4)]
         )
         beta, gamma = optimal.x
+        print(f'Found beta={beta} and gamma={gamma} for R_0={beta/gamma}')
         new_index, extended_actual, prediction = self.predict(beta, gamma, data)
         df = pd.DataFrame({
             'Actual': extended_actual,
@@ -87,10 +93,11 @@ def loss(point, data):
         I = y[1]
         R = y[2]
         return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
-    solution = solve_ivp(SIR, [0, size], [S_0,I_0,R_0], t_eval=np.arange(0, size, 1), vectorized=True)
+
+    initial = [0,1,0] #[S_0,I_0,R_0]
+    solution = solve_ivp(SIR, [0, size], initial, t_eval=np.arange(0, size, 1), vectorized=True)
     return np.sqrt(np.mean((solution.y[1] - data)**2))
 
 
-PATH_BASE = '~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series'
-PATH_TIME_CONFIRMED_GLOBAL = os.path.expanduser(os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv'))
-SirLearner(PATH_TIME_CONFIRMED_GLOBAL,'US',loss)
+
+if  __name__ =='__main__':start()
