@@ -36,51 +36,51 @@ def start():
     PATH_TIME_CONFIRMED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
     PATH_TIME_DEATHS_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_deaths_global.csv')
     PATH_TIME_RECOVERY_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_recovered_global.csv')
-
     PATH_TIME_CONFIRMED_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
 
+    important_states = ['New York','New Jersey','Pennsylvania','California']
+    
 
-    duration = 90
-    important_states = ['New York','New Jersey','Pennsylvania']
-    bounds=([0.1,-1,12], [0.7,1,duration])
+    custom_trend_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
 
-    custom_trend_us(PATH_TIME_CONFIRMED_US,'Pennsylvania','Confirmed')
-
-    custom_extrapolate_us(PATH_TIME_CONFIRMED_US,important_states,duration,logistic,bounds)
+    ##Extrapolation data uninformative - replacing with sir_learner
+    custom_extrapolate_us(PATH_TIME_CONFIRMED_US,important_states)
 
     custom_deathrate_global(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_DEATHS_GLOBAL)
 
-    custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL, expo)
+    custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL)
 
     custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
 
     custom_map_us(PATH_TIME_CONFIRMED_US)
+    
+    custom_fit_us(PATH_TIME_CONFIRMED_US,OUTPUT_BASE, important_states)
 
-    #custom_fit_us(PATH_TIME_CONFIRMED_US,OUTPUT_BASE, important_states,expo)
-
-def custom_trend_us(path,state,label):
+def custom_trend_us(path,states,label):
     '''
     Shows trend over time
     '''
-    #get recovered totals for each day
-    x,y = parse_time_us(path,state)
-    y = [v for v in y if v>100]
-    x = x[-len(y):]
-    dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
-    dy2 = [0]+[dy[i]-dy[i-1] for i,v in enumerate(dy) if i>0]
+    for state in states:
+        x,y = parse_time_us(path,state)
+        y = [v for v in y if v>100]
+        x = x[-len(y):]
+        dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
+        dy2 = [0]+[dy[i]-dy[i-1] for i,v in enumerate(dy) if i>0]
 
-    _, ax = plt.subplots()
-    ax.plot(x,y,label=label,c=numpy.random.rand(3,),linewidth=2)
-    ax.plot(x,dy,label=f'Newly {label}',c=numpy.random.rand(3,),linewidth=2)
-    ax.plot(x,dy2,label=f'{label} Trend',c=numpy.random.rand(3,),linewidth=2)
-    
-    ax.legend()
-    ax.set_xlabel('Date')
-    axFormatDate(ax)
-    ax.set_ylabel('Number')
-    ax.set_title(f'{label} Trend in {state}')
+        _, ax = plt.subplots()
+        ax.plot(x,y,label=label,c=numpy.random.rand(3,),linewidth=2)
+        ax.plot(x,dy,label=f'Newly {label}',c=numpy.random.rand(3,),linewidth=2)
+        ax.plot(x,dy2,label=f'{label} Trend',c=numpy.random.rand(3,),linewidth=2)
+        
+        ax.plot(x,[0]*len(x),c='black',label='0',linewidth=1) #zero line
+        ax.legend()
+        ax.set_xlabel('Date')
+        axFormatDate(ax)
+        ax.set_ylabel('Number')
+        ax.set_title(f'{label} Trend in {state}')
+        #ax.set_yscale('log')
 
-    plt.show()
+        plt.show()
     
 def custom_deathrate_global(path,deathpath):
     '''
@@ -98,7 +98,7 @@ def custom_deathrate_global(path,deathpath):
     print('|Country|Percent Infected|Death Rate|')
     print('|---|------:|------:|')
     for country,rate in sorted(drates.items(), key=(lambda item: item[1]), reverse=True):
-        print('|{0}|{1:0.3f}|{2:0.3f}|'.format(country,cpersent[country],rate))
+        print('|{0}|{1:0.6f}|{2:0.6f}|'.format(country,cpersent[country],rate))
     print('\n')
 
 def custom_recovery_us(path,recoverypath,important_states):
@@ -154,7 +154,7 @@ def custom_map_us(path):
         states[state] = max(y) if len(y) > 0 else 0
     us_map(states,'Percentage of State Population Infected',formatter='{0:.6f}')
 
-def custom_fit_us(path,OUTPUT_BASE,check_states=[],func=expo,min_days=3):
+def custom_fit_us(path,OUTPUT_BASE,check_states=[],min_days=5, min_cases=500):
     '''
     Fits data to curve, saves the best fit, displays base on map. Redder means high rate.
     '''
@@ -165,16 +165,16 @@ def custom_fit_us(path,OUTPUT_BASE,check_states=[],func=expo,min_days=3):
     with open(outpath,'w') as f:
         for state,_ in list(STATE_POPULATIONS.items()):
             _,y = parse_time_us(path,state)
-            y = [i for i in y if i>0]
-            if(len(y)>3): #we need >3 days worth of data
+            y = [i for i in y if i>min_cases]
+            if(len(y)>min_days): #we need >3 days worth of data
                 #print(state)
                 x = range(len(y)) #create days
                 try:
-                    params,_ = curve_fit(func, x, y)
+                    params,_ = curve_fit(expo, x, y)
                     states[state] = params[1]
 
                     if(state in check_states):
-                        graph_fit(x,y,func,'{} Case Growth'.format(state))
+                        graph_fit(x,y,expo,'{} Case Growth'.format(state))
                     f.write('{},{},{}\n'.format(state,*params))
                 except:
                     raise ValueError('Could not find best fit for {}'.format(state))
@@ -182,7 +182,7 @@ def custom_fit_us(path,OUTPUT_BASE,check_states=[],func=expo,min_days=3):
     us_map(states,'Case Growth')
 
 
-def custom_zero_global(path,func,min_cases=100):
+def custom_zero_global(path,min_cases=100):
     '''
     Shows cases over time starting the day at least min_cases were hit for each country
     '''
@@ -192,7 +192,7 @@ def custom_zero_global(path,func,min_cases=100):
         _,y = parse_time_global(path,country)
         y = [i/population for i in y if i>min_cases]
         x = range(len(y))
-        _,formula = best_fit(x,y,func,label=country)
+        _,formula = best_fit(x,y,expo,bounds=[0,0.9],label=country)
         label = '{}  {}'.format(country,formula)
         ax.plot(x, y, c=COUNTRY_COLORS[country],label=label)
 
@@ -203,7 +203,7 @@ def custom_zero_global(path,func,min_cases=100):
     plt.show()
 
 
-def custom_extrapolate_us(path,important_states,duration = 90,func=logistic, bounds=None):
+def custom_extrapolate_us(path,important_states,duration = 90,func=logistic, bounds=([0.1,-1,12], [0.7,1,duration])):
     '''
     Extrapolates the current data to fit func
     '''
@@ -286,12 +286,12 @@ def get_date_range(date_start,length):
     return [base + datetime.timedelta(days=x) for x in range(length)]
 
 
-def best_fit(x,y,func=expo,bounds=None,label='dat data'):
+def best_fit(x,y,func=expo,bounds=[-numpy.Inf,numpy.Inf],label='dat data'):
     '''
     attempt to find the best fit params and formula
     '''
     try:
-        params,_ = curve_fit(func, x, y, maxfev=5000, bounds = bounds)
+        params,_ = curve_fit(func, x, y, maxfev=10000, bounds = bounds)
         formula = FORMULAE[func].format(*params)
         return params,formula
     except:
