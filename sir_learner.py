@@ -9,7 +9,7 @@ from scipy.integrate import solve_ivp
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from datetime import timedelta, datetime
-import cProfile
+import cProfile,pstats
 
 COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "Japan":126860301, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047}
 
@@ -50,8 +50,8 @@ class SirLearner(object):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.country = country
-        s_0 = COUNTRY_POPULATIONS[country]
         i_0 = 5
+        s_0 = 100#COUNTRY_POPULATIONS[country] - i_0
         r_0 = 0
         self.initial = [s_0,i_0,r_0]
 
@@ -99,8 +99,8 @@ class SirLearner(object):
         confirmed = self.load_data(self.path_confirmed,self.country)
         recovered = self.load_data(self.path_recovered,self.country)
 
-        #pr = cProfile.Profile()
-        #pr.enable()
+        pr = cProfile.Profile()
+        pr.enable()
         optimal = minimize(
             loss,
             [0.001, 0.001],
@@ -108,9 +108,9 @@ class SirLearner(object):
             method='L-BFGS-B',
             bounds=[(0.00000001, 1), (0.00000001, 1)]
         )
-        #pr.disable()
-        #pr.print_stats()
-        
+        pr.disable()
+        stats = pstats.Stats(pr)
+        stats.sort_stats('cumtime').print_stats(0.1)
         beta, gamma = optimal.x
         print(f'Found beta={beta} and gamma={gamma} for R_0={beta/gamma}')
         
