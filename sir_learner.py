@@ -50,8 +50,8 @@ class SirLearner(object):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.country = country
-        s_0 = 100000#COUNTRY_POPULATIONS[country]
-        i_0 = 2
+        s_0 = COUNTRY_POPULATIONS[country]
+        i_0 = 5
         r_0 = 0
         self.initial = [s_0,i_0,r_0]
 
@@ -99,8 +99,8 @@ class SirLearner(object):
         confirmed = self.load_data(self.path_confirmed,self.country)
         recovered = self.load_data(self.path_recovered,self.country)
 
-        pr = cProfile.Profile()
-        pr.enable()
+        #pr = cProfile.Profile()
+        #pr.enable()
         optimal = minimize(
             loss,
             [0.001, 0.001],
@@ -108,8 +108,8 @@ class SirLearner(object):
             method='L-BFGS-B',
             bounds=[(0.00000001, 1), (0.00000001, 1)]
         )
-        pr.disable()
-        pr.print_stats()
+        #pr.disable()
+        #pr.print_stats()
         
         beta, gamma = optimal.x
         print(f'Found beta={beta} and gamma={gamma} for R_0={beta/gamma}')
