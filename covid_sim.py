@@ -39,49 +39,40 @@ def start():
     PATH_TIME_CONFIRMED_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
 
     important_states = ['New York','New Jersey','Pennsylvania','California']
-    
+   
+ 
+    custom_trend_us_county(PATH_TIME_CONFIRMED_US,'Bucks','Pennsylvania','Confirmed')
+
 
     custom_trend_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
+    
+    custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
 
     ##Extrapolation data uninformative - replacing with sir_learner
-    custom_extrapolate_us(PATH_TIME_CONFIRMED_US,important_states)
-
+    #custom_extrapolate_us(PATH_TIME_CONFIRMED_US,important_states)
+    
     custom_deathrate_global(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_DEATHS_GLOBAL)
 
     custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL)
 
-    custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
-
     custom_map_us(PATH_TIME_CONFIRMED_US)
     
-    custom_fit_us(PATH_TIME_CONFIRMED_US,OUTPUT_BASE, important_states)
+    #custom_fit_us(PATH_TIME_CONFIRMED_US,OUTPUT_BASE, important_states)
+def custom_trend_us_county(path,county,state,label):
+    '''
+    Shows trend over time for one county
+    '''
+    x,y = parse_time_us_county(path,county,state)
+    graph_trend(x,y,f"{county}, {state}",label)
 
 def custom_trend_us(path,states,label):
     '''
-    Shows trend over time
+    Shows trend over time for various states
     '''
     for state in states:
         x,y = parse_time_us(path,state)
-        y = [v for v in y if v>100]
-        x = x[-len(y):]
-        dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
-        dy2 = [0]+[dy[i]-dy[i-1] for i,v in enumerate(dy) if i>0]
+        graph_trend(x,y,state,label)
 
-        _, ax = plt.subplots()
-        ax.plot(x,y,label=label,c=numpy.random.rand(3,),linewidth=2)
-        ax.plot(x,dy,label=f'Newly {label}',c=numpy.random.rand(3,),linewidth=2)
-        ax.plot(x,dy2,label=f'{label} Trend',c=numpy.random.rand(3,),linewidth=2)
-        
-        ax.plot(x,[0]*len(x),c='black',label='0',linewidth=1) #zero line
-        ax.legend()
-        ax.set_xlabel('Date')
-        axFormatDate(ax)
-        ax.set_ylabel('Number')
-        ax.set_title(f'{label} Trend in {state}')
-        #ax.set_yscale('log')
-
-        plt.show()
-    
 def custom_deathrate_global(path,deathpath):
     '''
     Creates a markdown graph which shows the current deathrate by country
@@ -203,10 +194,12 @@ def custom_zero_global(path,min_cases=100):
     plt.show()
 
 
-def custom_extrapolate_us(path,important_states,duration = 90,func=logistic, bounds=([0.1,-1,12], [0.7,1,duration])):
+def custom_extrapolate_us(path,important_states,duration = 90):
     '''
     Extrapolates the current data to fit func
     '''
+    bounds = ([0.1,-1,12], [0.7,1,duration])
+
     _, ax = plt.subplots()
     for i,state in enumerate(important_states):
         x,y = parse_time_us(path,state)
@@ -215,11 +208,11 @@ def custom_extrapolate_us(path,important_states,duration = 90,func=logistic, bou
         x = range(len(y))
         ax.plot(xd,y,c=numpy.random.rand(3,),label=state,linewidth=3)
 
-        params,formula = best_fit(x,y,func,bounds,state)
+        params,formula = best_fit(x,y,logistic,bounds,state)
         
         xd = get_date_range(xd[0],duration)
         x = range(duration)
-        y = func(x,*params)
+        y = logistic(x,*params)
         
         y = [i for i in y if i<=100]
         x = x[0:len(y)]
@@ -242,10 +235,8 @@ def custom_extrapolate_us(path,important_states,duration = 90,func=logistic, bou
 
 
 
-
-
-
-
+def parse_time_us_county(path,county,state):
+    return parse_time(path,county,5,11,value2=state,value2_idx=6)
 
 def parse_time_us(path,state):
     return parse_time(path,state,6,11)
@@ -253,7 +244,7 @@ def parse_time_us(path,state):
 def parse_time_global(path,country):
     return parse_time(path,country,1,4)
 
-def parse_time(path,value,value_idx,date_start_idx):
+def parse_time(path,value,value_idx,date_start_idx,value2=None,value2_idx=None):
     '''
     parse a time series file from the COVID-19 repo
     '''
@@ -269,12 +260,13 @@ def parse_time(path,value,value_idx,date_start_idx):
         reader = csv.reader(f, delimiter=",")
         for _, row in enumerate(reader):
             if(row[value_idx] == value):
-                new = row[date_start_idx:]
-                try:
-                    y = [int(a or '0') + int(b or '0') for a,b in zip(y, new)]
-                except:
-                    print(new)
-                    raise ValueError('Could not parse values')
+                if(value2 is None or row[value2_idx] == value2):
+                    new = row[date_start_idx:]
+                    try:
+                        y = [int(a or '0') + int(b or '0') for a,b in zip(y, new)]
+                    except:
+                        print(new)
+                        raise ValueError('Could not parse values')
         return x,y
 
 
@@ -366,6 +358,30 @@ def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
     plt.show()
 
 
+def graph_trend(x,y,location,label,threshold=100):
+    '''
+    Shows data, first, and second derivative
+    '''
+    y = [v for v in y if v>threshold]
+    x = x[-len(y):]
+    dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
+    dy2 = [0]+[dy[i]-dy[i-1] for i,v in enumerate(dy) if i>0]
+
+    _, ax = plt.subplots()
+    ax.plot(x,y,label=label,c=numpy.random.rand(3,),linewidth=2)
+    ax.plot(x,dy,label=f'Newly {label}',c=numpy.random.rand(3,),linewidth=2)
+    ax.plot(x,dy2,label=f'{label} Trend',c=numpy.random.rand(3,),linewidth=2)
+    
+    ax.plot(x,[0]*len(x),c='black',label='0',linewidth=1) #zero line
+    ax.legend()
+    ax.set_xlabel('Date')
+    axFormatDate(ax)
+    ax.set_ylabel('Number')
+    ax.set_title(f'{label} Trend in {location}')
+    #ax.set_yscale('log')
+
+    plt.show()
+    
 def cmap(value,mn,mx):
     value = numpy.abs(value)
     mn = numpy.abs(mn)
