@@ -11,6 +11,7 @@ from scipy.optimize import minimize,least_squares
 import matplotlib.pyplot as plt
 from datetime import timedelta, datetime
 import cProfile,pstats
+import matplotlib.dates as mdates
 
 COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "Japan":126860301, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047}
 
@@ -47,7 +48,7 @@ def loss(point, confirmed, recovered,initial):
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, country, S_0=2000000, I_0 = 100, duration=150):
+    def __init__(self, path_confirmed,path_recovered, country, S_0=2500000, I_0 = 100, duration=180):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.country = country
@@ -73,7 +74,7 @@ class SirLearner(object):
         while len(values) < new_size:
             current = current + timedelta(days=1)
             values = np.append(values, datetime.strftime(current, '%m/%d/%y'))
-        return values
+        return [datetime.strptime(x,'%m/%d/%y') for x in values]
 
     def predict(self, beta, gamma):
         """
@@ -131,11 +132,20 @@ class SirLearner(object):
             'I': prediction.y[1],
             'R': prediction.y[2]
         }, index=new_index)
+
         fig, ax = plt.subplots(figsize=(15, 10))
-        ax.set_title(self.country)
+        now = datetime.now().strftime('%Y%m%d')
+        ax.set_title(f'{self.country} SIR Model from {now}')
+        
+        ax.set_xticks(df.index)
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+        ax.xaxis.set_minor_formatter(mdates.DateFormatter("%d"))
         df.plot(ax=ax)
+        plt.xticks(rotation=90)    
+        
+        
         plt.show()
-        fig.savefig(abspath(f"./out/{self.country}.png"))
+        fig.savefig(abspath(f"./out/{self.country}_{now}.png"))
 
 
 
