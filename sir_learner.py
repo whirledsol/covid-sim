@@ -24,34 +24,34 @@ def start():
     learner.train()
 
 
-def loss(point, confirmed, recovered,I_0):
+def loss(point, confirmed, recovered,initial):
     """
     RMSE between actual confirmed cases and the estimated infectious people with given beta and gamma.
     """
     size = len(confirmed)
-    S_0, beta, gamma = point
+    beta, gamma = point
 
     def SIR(t, y):
         S = y[0]
         I = y[1]
         return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
     
-    solution = solve_ivp(SIR, [0, size], [S_0,I_0,0], t_eval=np.arange(0, size, 1), vectorized=True)
+    solution = solve_ivp(SIR, [0, size], initial, t_eval=np.arange(0, size, 1), vectorized=True)
             
     
     l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))
 
     # Put more emphasis on recovered people
-    alpha = 0
+    alpha = 0.1
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, country, I_0 = 50, duration=150):
+    def __init__(self, path_confirmed,path_recovered, country, S_0=2000000, I_0 = 100, duration=150):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.country = country
-        self.I_0 = I_0
+        self.initial = [S_0,I_0,0]
         self.duration = duration
 
     def load_data(self, path, country):
@@ -75,7 +75,7 @@ class SirLearner(object):
             values = np.append(values, datetime.strftime(current, '%m/%d/%y'))
         return values
 
-    def predict(self, S_0, beta, gamma):
+    def predict(self, beta, gamma):
         """
         Predict how the number of people in each compartment can be changed through time toward the future.
         The model is formulated with the given beta and gamma.
@@ -86,16 +86,16 @@ class SirLearner(object):
             I = y[1]
             return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
         
-        initial = [self.I_0,S_0,0]
-        return solve_ivp(SIR, [0, self.duration], initial, t_eval=np.arange(0, self.duration, 1))
+        return solve_ivp(SIR, [0, self.duration], self.initial, t_eval=np.arange(0, self.duration, 1))
 
     def train(self):
         """
         Run the optimization to estimate the beta and gamma fitting the given confirmed cases.
         """
         #get the data we need
+        I_0 = self.initial[1]
         confirmed = self.load_data(self.path_confirmed,self.country)
-        confirmed = confirmed[confirmed.values > self.I_0]
+        confirmed = confirmed[confirmed.values > I_0]
         recovered = self.load_data(self.path_recovered,self.country)
         recovered = recovered[-len(confirmed):]
 
@@ -104,30 +104,24 @@ class SirLearner(object):
         confirmed_extended = np.concatenate((confirmed.values, [None] * (self.duration - len(confirmed.values))))
         recovered_extended = np.concatenate((recovered.values, [None] * (self.duration - len(recovered.values))))
         
-        #find the best parameters
-        S_0_min = max(confirmed.values) * 1.1
-        S_0_max = COUNTRY_POPULATIONS[self.country]
-        S_0_avg = np.mean([S_0_min,S_0_max])
-        print(f'S_0 bounds are ({S_0_min},{S_0_max}) for mean {S_0_avg}')
-
         print(f'Starting minimize on {datetime.now()}')
         pr = cProfile.Profile()
         pr.enable()
-        optimal = least_squares(
+        optimal = minimize(
             loss,
-            (S_0_avg,0.001, 0.001),
-            args=(confirmed,recovered,self.I_0),
-            #method='COBYLA',#'L-BFGS-B',
-            bounds=([S_0_min,0.00000001,0.00000001],[S_0_max, 1,1])#[(S_0_min,S_0_max),(0.00000001, 1), (0.00000001, 1)]
+            (0.001, 0.001),
+            args=(confirmed,recovered,self.initial),
+            method='L-BFGS-B',
+            bounds=[(0.00000001, 1), (0.00000001, 1)]
         )
         pr.disable()
         stats = pstats.Stats(pr)
         stats.sort_stats('cumtime').print_stats(2)
-        S_0, beta, gamma = optimal.x
-        print(f'Found S_0={S_0}, beta={beta}, gamma={gamma} for R_0={beta/gamma}')
+        beta, gamma = optimal.x
+        print(f'Found beta={beta}, gamma={gamma} for R_0={beta/gamma}')
         
         #run simulation
-        prediction = self.predict(S_0, beta, gamma)
+        prediction = self.predict(beta, gamma)
 
         #graph results
         df = pd.DataFrame({
