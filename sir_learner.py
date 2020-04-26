@@ -3,7 +3,6 @@
 taken from https://www.lewuathe.com/covid-19-dynamics-with-sir-model.html
 """
 import os
-from os.path import abspath
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
@@ -19,8 +18,10 @@ def start():
     PATH_BASE = os.path.expanduser('~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series')
     PATH_TIME_CONFIRMED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
     PATH_TIME_RECOVERED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_recovered_global.csv')
+    PATH_TIME_DEATHS_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_deaths_global.csv')
 
-    learner = SirLearner(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_RECOVERED_GLOBAL,'US')
+    learner = SirLearner(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_RECOVERED_GLOBAL,PATH_TIME_DEATHS_GLOBAL,'US')
+
     learner.train()
 
 
@@ -43,50 +44,17 @@ def loss(point, confirmed, recovered,initial):
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))
 
     # Put more emphasis on recovered people
-    alpha = 0.1
+    alpha = 0.15
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, country, S_0=2500000, I_0 = 100, duration=180):
+    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=3000000, I_0 = 100, duration=180):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
+        self.path_deaths = path_deaths
         self.country = country
         self.initial = [S_0,I_0,0]
         self.duration = duration
-
-    def load_data(self, path, country):
-      """
-      Load confirmed cases downloaded from HDX
-      """
-      df = pd.read_csv(path)
-      country_df = df[df['Country/Region'] == country]
-      results = country_df.iloc[0].loc['1/22/20':]
-      results = results.astype(int)
-      return results
-
-    def extend_index(self, index, new_size):
-        """
-        gets a datetime range until it matches the new_size
-        """
-        values = index.values
-        current = datetime.strptime(index[-1], '%m/%d/%y')
-        while len(values) < new_size:
-            current = current + timedelta(days=1)
-            values = np.append(values, datetime.strftime(current, '%m/%d/%y'))
-        return [datetime.strptime(x,'%m/%d/%y') for x in values]
-
-    def predict(self, beta, gamma):
-        """
-        Predict how the number of people in each compartment can be changed through time toward the future.
-        The model is formulated with the given beta and gamma.
-        """
-
-        def SIR(t,y):
-            S = y[0]
-            I = y[1]
-            return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
-        
-        return solve_ivp(SIR, [0, self.duration], self.initial, t_eval=np.arange(0, self.duration, 1))
 
     def train(self):
         """
@@ -98,8 +66,13 @@ class SirLearner(object):
         confirmed = confirmed[confirmed.values > I_0]
         recovered = self.load_data(self.path_recovered,self.country)
         recovered = recovered[-len(confirmed):]
+        deaths = self.load_data(self.path_deaths,self.country)
+        deaths = deaths[-len(confirmed):]
 
-        #extend the data
+        #"recovered" in SIR model is both recovered and deaths
+        recovered = recovered.add(deaths)
+
+        #resize these objects
         new_index = self.extend_index(confirmed.index, self.duration)
         confirmed_extended = np.concatenate((confirmed.values, [None] * (self.duration - len(confirmed.values))))
         recovered_extended = np.concatenate((recovered.values, [None] * (self.duration - len(recovered.values))))
@@ -134,7 +107,7 @@ class SirLearner(object):
 
         fig, ax = plt.subplots(figsize=(15, 10))
         now = datetime.now().strftime('%Y%m%d')
-        ax.set_title(f'{self.country} SIR Model from {now}')
+        ax.set_title(f'SIR Model for {self.country} from {now}')
         
         ax.set_xticks(df.index)
         ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
@@ -144,7 +117,41 @@ class SirLearner(object):
         
         
         plt.show()
-        fig.savefig(abspath(f"./out/{self.country}_{now}.png"))
+        fig.savefig(os.path.realpath(f"./out/SIR_{self.country}_{now}.png"))
+
+    def load_data(self, path, country):
+      """
+      Load confirmed cases downloaded from HDX
+      """
+      df = pd.read_csv(path)
+      country_df = df[df['Country/Region'] == country]
+      results = country_df.iloc[0].loc['1/22/20':]
+      results = results.astype(int)
+      return results
+
+    def extend_index(self, index, new_size):
+        """
+        gets a datetime range until it matches the new_size
+        """
+        values = index.values
+        current = datetime.strptime(index[-1], '%m/%d/%y')
+        while len(values) < new_size:
+            current = current + timedelta(days=1)
+            values = np.append(values, datetime.strftime(current, '%m/%d/%y'))
+        return [datetime.strptime(x,'%m/%d/%y') for x in values]
+
+    def predict(self, beta, gamma):
+        """
+        Predict how the number of people in each compartment can be changed through time toward the future.
+        The model is formulated with the given beta and gamma.
+        """
+
+        def SIR(t,y):
+            S = y[0]
+            I = y[1]
+            return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
+        
+        return solve_ivp(SIR, [0, self.duration], self.initial, t_eval=np.arange(0, self.duration, 1))
 
 
 
