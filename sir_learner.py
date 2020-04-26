@@ -21,7 +21,6 @@ def start():
     PATH_TIME_RECOVERED_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_recovered_global.csv')
 
     learner = SirLearner(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_RECOVERED_GLOBAL,'US')
-
     learner.train()
 
 

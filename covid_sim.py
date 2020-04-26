@@ -13,6 +13,7 @@ import cartopy.io.shapereader as shpreader
 from scipy.optimize import OptimizeWarning,fsolve
 import matplotlib.dates as mdates
 from sir_model import SIR
+import calendar
 
 warnings.simplefilter("ignore", OptimizeWarning)
 COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "Japan":126860301, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047}
@@ -40,12 +41,13 @@ def start():
 
     important_states = ['New York','New Jersey','Pennsylvania','California']
    
- 
-    custom_trend_us_county(PATH_TIME_CONFIRMED_US,'Bucks','Pennsylvania','Confirmed')
+    custom_trend_us(PATH_TIME_CONFIRMED_US,important_states)
+
+    custom_delta_us_county(PATH_TIME_CONFIRMED_US,'Bucks','Pennsylvania','Confirmed')
 
 
-    custom_trend_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
-    
+    custom_delta_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
+
     custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
 
     ##Extrapolation data uninformative - replacing with sir_learner
@@ -58,20 +60,47 @@ def start():
     custom_map_us(PATH_TIME_CONFIRMED_US)
     
     #custom_fit_us(PATH_TIME_CONFIRMED_US,OUTPUT_BASE, important_states)
-def custom_trend_us_county(path,county,state,label):
+def custom_delta_us_county(path,county,state,label):
     '''
     Shows trend over time for one county
     '''
     x,y = parse_time_us_county(path,county,state)
-    graph_trend(x,y,f"{county}, {state}",label)
+    graph_delta(x,y,f"{county}, {state}",label)
 
-def custom_trend_us(path,states,label):
+def custom_delta_us(path,states,label):
     '''
     Shows trend over time for various states
     '''
     for state in states:
         x,y = parse_time_us(path,state)
-        graph_trend(x,y,state,label)
+        graph_delta(x,y,state,label)
+
+def custom_trend_us(path,states,threshold=100):
+    '''
+    Shows the changes for each day of the week to see if there is a weekly trend
+    '''
+    for state in states:
+        x,y = parse_time_us(path,state)
+        y = [v for v in y if v>threshold]
+        x = x[-len(y):]
+        dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
+        x = [d.weekday() for d in x]
+
+        bins = [[] for i in range(7)]
+
+        for i in range(len(x)):
+            bins[x[i]].append(dy[i])
+        
+        _, ax = plt.subplots()
+
+        ax.boxplot(bins)
+        ax.set_title(f'Weekly Trend of New Cases in {state}')
+        ax.set_xlabel('Day of Week')
+        ax.set_ylabel('New Cases')
+        toCalendarDay = lambda x, pos:calendar.day_name[x-1]
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(toCalendarDay))
+        
+        plt.show()
 
 def custom_deathrate_global(path,deathpath):
     '''
@@ -358,7 +387,7 @@ def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
     plt.show()
 
 
-def graph_trend(x,y,location,label,threshold=100):
+def graph_delta(x,y,location,label,threshold=100):
     '''
     Shows data, first, and second derivative
     '''
@@ -370,7 +399,7 @@ def graph_trend(x,y,location,label,threshold=100):
     _, ax = plt.subplots()
     ax.plot(x,y,label=label,c=numpy.random.rand(3,),linewidth=2)
     ax.plot(x,dy,label=f'Newly {label}',c=numpy.random.rand(3,),linewidth=2)
-    ax.plot(x,dy2,label=f'{label} Trend',c=numpy.random.rand(3,),linewidth=2)
+    ax.plot(x,dy2,label=f'{label} Change',c=numpy.random.rand(3,),linewidth=2)
     
     ax.plot(x,[0]*len(x),c='black',label='0',linewidth=1) #zero line
     ax.legend()
