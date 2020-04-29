@@ -38,28 +38,50 @@ def start():
     PATH_TIME_DEATHS_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_deaths_global.csv')
     PATH_TIME_RECOVERY_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_recovered_global.csv')
     PATH_TIME_CONFIRMED_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
+    PATH_TIME_DEATHS_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
 
-    important_states = ['New York','New Jersey','Pennsylvania','California']
+    important_states = ['New York','New Jersey','Pennsylvania','Ohio']
    
-    custom_trend_us(PATH_TIME_CONFIRMED_US,important_states)
+    custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL)
+    
+    #custom_trend_us(PATH_TIME_CONFIRMED_US,important_states)
 
-    custom_delta_us_county(PATH_TIME_CONFIRMED_US,'Bucks','Pennsylvania','Confirmed')
-
+    custom_delta_us_county(PATH_TIME_CONFIRMED_US, 'Bucks','Pennsylvania','Confirmed')
 
     custom_delta_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
 
     custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
-
-    ##Extrapolation data uninformative - replacing with sir_learner
-    #custom_extrapolate_us(PATH_TIME_CONFIRMED_US,important_states)
     
     custom_deathrate_global(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_DEATHS_GLOBAL)
+    
+    custom_deathrate_us(PATH_TIME_CONFIRMED_US,PATH_TIME_DEATHS_US,important_states)
 
-    custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL)
 
     custom_map_us(PATH_TIME_CONFIRMED_US)
+
+def custom_all_us_county(c_path,d_path,county,state,label, min_cases=100):
+    '''
+    Shows all info for one county
+    '''
+    cx,cy = parse_time_us_county(c_path,county,state)
+    cy = [i for i in cy if i>min_cases]
+    cx = cx[-len(cy):]
+
+    dx,dy = parse_time(d_path,county,5,12,value2=state,value2_idx=6)
+    dx = dx[-len(cy):]
+    dy = dy[-len(cy):]
+
+    _, ax = plt.subplots()
+    ax.set_title(f'Covid Data in {county}, {state}')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Number')
     
-    #custom_fit_us(PATH_TIME_CONFIRMED_US,OUTPUT_BASE, important_states)
+    ax.plot(cx,cy,label='Confirmed',c=numpy.random.rand(3,),linewidth=2)
+    ax.plot(dx,dy,label='Deaths',c=numpy.random.rand(3,),linewidth=2)
+    ax.legend()
+    ax.set_yscale('log')
+    plt.show()
+
 def custom_delta_us_county(path,county,state,label):
     '''
     Shows trend over time for one county
@@ -102,6 +124,26 @@ def custom_trend_us(path,states,threshold=100):
         
         plt.show()
 
+def custom_deathrate_us(path,deathpath,important_states):
+    '''
+    Creates a markdown graph which shows the current deathrate by state
+    '''
+    cpersent = {}
+    drates = {}
+    for state in important_states:
+        population = STATE_POPULATIONS[state]
+        _,y = parse_time_us(path,state)
+        _,dy = parse_time(deathpath,state,6,12)
+        latest = max(dy)/max(y)
+        cpersent[state] = max(y)/population
+        drates[state] = latest
+    
+    print('|State|Percent Infected|Death Rate|')
+    print('|---|------:|------:|')
+    for state,rate in sorted(drates.items(), key=(lambda item: item[1]), reverse=True):
+        print('|{0}|{1:0.6f}|{2:0.6f}|'.format(state,cpersent[state],rate))
+    print('\n')
+    
 def custom_deathrate_global(path,deathpath):
     '''
     Creates a markdown graph which shows the current deathrate by country
