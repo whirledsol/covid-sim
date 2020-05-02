@@ -37,7 +37,6 @@ def graph_slider(xs,func,sliderOptions):
 
     graphs = []
     for ys in yss:
-        print(ys)
         graph, = plt.plot(xs, ys, lw=2)
         graphs.append(graph)
     
