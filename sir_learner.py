@@ -31,6 +31,11 @@ def loss(point, confirmed, recovered,initial):
     """
     size = len(confirmed)
     beta, gamma = point
+    
+    #restrict solutions to an acceptable r0 value
+    r0 = beta/gamma 
+    if r0 <= 1 or r0 > 10:
+        return 100000000
 
     def SIR(t, y):
         S = y[0]
@@ -38,23 +43,23 @@ def loss(point, confirmed, recovered,initial):
         return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
     
     solution = solve_ivp(SIR, [0, size], initial, t_eval=np.arange(0, size, 1), vectorized=True)
-            
-    
-    l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
-    l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))
 
+    l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))      
+    l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
+    #    print(f'Testing {beta},{gamma} yielded {l1},{l2}')
     # Put more emphasis on recovered people
-    alpha = 0.15
+    alpha = 0.25
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=3000000, I_0 = 100, duration=180):
+    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=2500000, I_0 = 100, duration=90):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.path_deaths = path_deaths
         self.country = country
         self.initial = [S_0,I_0,0]
         self.duration = duration
+
 
     def train(self):
         """
@@ -71,31 +76,35 @@ class SirLearner(object):
 
         #"recovered" in SIR model is both recovered and deaths
         recovered = recovered.add(deaths)
+        
+        itterations = 0
+        def minimize_callback(vector):
+            itterations+=1
+
+        #start the minimize
+        start = datetime.now()
+        print(f'Starting minimize on {start}')
+        optimal = minimize(
+            loss,
+            (0.16, 0.04),
+            args=(confirmed,recovered,self.initial),
+            method='L-BFGS-B',
+            bounds=[(0.005, 50), (0.001, 10)],
+            callback=minimize_callback
+        )
+        beta, gamma = optimal.x
+        stop = datetime.now()
+        elapsed = (stop-start).total_seconds()
+        print(f'After {elapsed}s and {itterations} itterations, found beta={beta}, gamma={gamma} for R_0={beta/gamma}')
+        
+        #run simulation
+        prediction = self.predict(beta, gamma)
 
         #resize these objects
         new_index = self.extend_index(confirmed.index, self.duration)
         confirmed_extended = np.concatenate((confirmed.values, [None] * (self.duration - len(confirmed.values))))
         recovered_extended = np.concatenate((recovered.values, [None] * (self.duration - len(recovered.values))))
         
-        print(f'Starting minimize on {datetime.now()}')
-        pr = cProfile.Profile()
-        pr.enable()
-        optimal = minimize(
-            loss,
-            (0.001, 0.001),
-            args=(confirmed,recovered,self.initial),
-            method='L-BFGS-B',
-            bounds=[(0.00000001, 1), (0.00000001, 1)]
-        )
-        pr.disable()
-        stats = pstats.Stats(pr)
-        stats.sort_stats('cumtime').print_stats(2)
-        beta, gamma = optimal.x
-        print(f'Found beta={beta}, gamma={gamma} for R_0={beta/gamma}')
-        
-        #run simulation
-        prediction = self.predict(beta, gamma)
-
         #graph results
         df = pd.DataFrame({
             'Confirmed': confirmed_extended,
@@ -115,9 +124,9 @@ class SirLearner(object):
         df.plot(ax=ax)
         plt.xticks(rotation=90)    
         
-        
-        plt.show()
         fig.savefig(os.path.realpath(f"./out/SIR_{self.country}_{now}.png"))
+        plt.show()
+
 
     def load_data(self, path, country):
       """
