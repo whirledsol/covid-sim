@@ -6,13 +6,18 @@ import os
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
-from scipy.optimize import minimize,least_squares
+from scipy.optimize import minimize,differential_evolution
 import matplotlib.pyplot as plt
 from datetime import timedelta, datetime
 import cProfile,pstats
 import matplotlib.dates as mdates
 
 COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "Japan":126860301, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047}
+itterations = 0
+def minimize_callback(vector):
+    global itterations
+    itterations+=1
+    print(f"{itterations}: {vector}")
 
 def start():
     PATH_BASE = os.path.expanduser('~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series')
@@ -34,30 +39,33 @@ def loss(point, confirmed, recovered,initial):
     
     #restrict solutions to an acceptable r0 value
     r0 = beta/gamma 
-    if r0 <= 1 or r0 > 10:
+    if r0 <= 1:
         return 100000000
 
     def SIR(t, y):
         S = y[0]
         I = y[1]
+        R = y[2]
         return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
     
     solution = solve_ivp(SIR, [0, size], initial, t_eval=np.arange(0, size, 1), vectorized=True)
 
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))      
     l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
-    #    print(f'Testing {beta},{gamma} yielded {l1},{l2}')
     # Put more emphasis on recovered people
-    alpha = 0.25
+    alpha = 0.1
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=2500000, I_0 = 100, duration=90):
+    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=2500000, I_0 = 1000, duration=90):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.path_deaths = path_deaths
         self.country = country
-        self.initial = [S_0,I_0,0]
+
+        self.S_0 = S_0
+        
+        self.initial = [S_0/S_0,I_0/S_0,0]
         self.duration = duration
 
 
@@ -76,20 +84,18 @@ class SirLearner(object):
 
         #"recovered" in SIR model is both recovered and deaths
         recovered = recovered.add(deaths)
+
         
-        itterations = 0
-        def minimize_callback(vector):
-            itterations+=1
 
         #start the minimize
         start = datetime.now()
         print(f'Starting minimize on {start}')
         optimal = minimize(
             loss,
-            (0.16, 0.04),
+            (0.001, 0.0001),
             args=(confirmed,recovered,self.initial),
             method='L-BFGS-B',
-            bounds=[(0.005, 50), (0.001, 10)],
+            bounds=[(0.00000005, 1), (0.00000005, 0.75)],
             callback=minimize_callback
         )
         beta, gamma = optimal.x
@@ -136,7 +142,7 @@ class SirLearner(object):
       country_df = df[df['Country/Region'] == country]
       results = country_df.iloc[0].loc['1/22/20':]
       results = results.astype(int)
-      return results
+      return results.apply(lambda x: x/self.S_0)
 
     def extend_index(self, index, new_size):
         """
