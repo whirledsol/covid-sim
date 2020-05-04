@@ -14,10 +14,10 @@ import matplotlib.dates as mdates
 
 COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "Japan":126860301, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047}
 itterations = 0
-def minimize_callback(vector):
+def minimize_callback(vector,convergence):
     global itterations
     itterations+=1
-    print(f"{itterations}: {vector}")
+    #print(f"{itterations}: {vector} {convergence}")
 
 def start():
     PATH_BASE = os.path.expanduser('~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series')
@@ -38,9 +38,7 @@ def loss(point, confirmed, recovered,initial):
     beta, gamma = point
     
     #restrict solutions to an acceptable r0 value
-    r0 = beta/gamma 
-    if r0 <= 1:
-        return 100000000
+    r0 = beta/gamma
 
     def SIR(t, y):
         S = y[0]
@@ -53,19 +51,19 @@ def loss(point, confirmed, recovered,initial):
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))      
     l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
     # Put more emphasis on recovered people
-    alpha = 0.1
+    alpha = 0.25
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=2500000, I_0 = 1000, duration=90):
+    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=COUNTRY_POPULATIONS['US']/12, I_0 = 1000, duration=180):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.path_deaths = path_deaths
         self.country = country
 
         self.S_0 = S_0
-        
-        self.initial = [S_0/S_0,I_0/S_0,0]
+        self.initial = [S_0,I_0,0]
+        self.initial = [x/S_0 for x in self.initial]
         self.duration = duration
 
 
@@ -90,12 +88,10 @@ class SirLearner(object):
         #start the minimize
         start = datetime.now()
         print(f'Starting minimize on {start}')
-        optimal = minimize(
+        optimal = differential_evolution(
             loss,
-            (0.001, 0.0001),
+            [(0.00005, 1), (0.00005, 0.75)],
             args=(confirmed,recovered,self.initial),
-            method='L-BFGS-B',
-            bounds=[(0.00000005, 1), (0.00000005, 0.75)],
             callback=minimize_callback
         )
         beta, gamma = optimal.x
