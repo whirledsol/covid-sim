@@ -30,15 +30,14 @@ def start():
     learner.train()
 
 
-def loss(point, confirmed, recovered,initial):
+def loss(point, confirmed, recovered, I_0):
     """
     RMSE between actual confirmed cases and the estimated infectious people with given beta and gamma.
     """
     size = len(confirmed)
-    beta, gamma = point
+    S_0, beta, gamma = point
     
-    #restrict solutions to an acceptable r0 value
-    r0 = beta/gamma
+    initial = [S_0,I_0,0]
 
     def SIR(t, y):
         S = y[0]
@@ -51,19 +50,18 @@ def loss(point, confirmed, recovered,initial):
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))      
     l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
     # Put more emphasis on recovered people
-    alpha = 0.25
+    alpha = 0.9
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, path_deaths,country, S_0=COUNTRY_POPULATIONS['US']/12, I_0 = 1000, duration=180):
+    def __init__(self, path_confirmed,path_recovered, path_deaths,country, normalization_constant=COUNTRY_POPULATIONS['US'], I_0_std = 1000, duration=360):
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.path_deaths = path_deaths
         self.country = country
 
-        self.S_0 = S_0
-        self.initial = [S_0,I_0,0]
-        self.initial = [x/S_0 for x in self.initial]
+        self.normalization_constant = normalization_constant
+        self.I_0 = I_0_std/normalization_constant
         self.duration = duration
 
 
@@ -72,9 +70,8 @@ class SirLearner(object):
         Run the optimization to estimate the beta and gamma fitting the given confirmed cases.
         """
         #get the data we need
-        I_0 = self.initial[1]
         confirmed = self.load_data(self.path_confirmed,self.country)
-        confirmed = confirmed[confirmed.values > I_0]
+        confirmed = confirmed[confirmed.values > self.I_0]
         recovered = self.load_data(self.path_recovered,self.country)
         recovered = recovered[-len(confirmed):]
         deaths = self.load_data(self.path_deaths,self.country)
@@ -83,24 +80,26 @@ class SirLearner(object):
         #"recovered" in SIR model is both recovered and deaths
         recovered = recovered.add(deaths)
 
-        
+        #bounds
+        S_0_min = max(confirmed)
+        S_0_max = 0.5
 
         #start the minimize
         start = datetime.now()
         print(f'Starting minimize on {start}')
         optimal = differential_evolution(
             loss,
-            [(0.00005, 1), (0.00005, 0.75)],
-            args=(confirmed,recovered,self.initial),
+            [(S_0_min,S_0_max),(0.0000005, 1), (0.0000005, 1)],
+            args=(confirmed,recovered,self.I_0),
             callback=minimize_callback
         )
-        beta, gamma = optimal.x
+        S_0, beta, gamma = optimal.x
         stop = datetime.now()
         elapsed = (stop-start).total_seconds()
-        print(f'After {elapsed}s and {itterations} itterations, found beta={beta}, gamma={gamma} for R_0={beta/gamma}')
+        print(f'After {elapsed}s and {itterations} itterations, found S_0={S_0}, beta={beta}, gamma={gamma} for R_0={beta/gamma}')
         
         #run simulation
-        prediction = self.predict(beta, gamma)
+        prediction = self.predict(S_0, beta, gamma)
 
         #resize these objects
         new_index = self.extend_index(confirmed.index, self.duration)
@@ -138,7 +137,7 @@ class SirLearner(object):
       country_df = df[df['Country/Region'] == country]
       results = country_df.iloc[0].loc['1/22/20':]
       results = results.astype(int)
-      return results.apply(lambda x: x/self.S_0)
+      return results.apply(lambda x: x/self.normalization_constant)
 
     def extend_index(self, index, new_size):
         """
@@ -151,18 +150,18 @@ class SirLearner(object):
             values = np.append(values, datetime.strftime(current, '%m/%d/%y'))
         return [datetime.strptime(x,'%m/%d/%y') for x in values]
 
-    def predict(self, beta, gamma):
+    def predict(self, S_0, beta, gamma):
         """
         Predict how the number of people in each compartment can be changed through time toward the future.
         The model is formulated with the given beta and gamma.
         """
-
+        initial = [S_0,self.I_0,0]
         def SIR(t,y):
             S = y[0]
             I = y[1]
             return [-beta*S*I, beta*S*I-gamma*I, gamma*I]
         
-        return solve_ivp(SIR, [0, self.duration], self.initial, t_eval=np.arange(0, self.duration, 1))
+        return solve_ivp(SIR, [0, self.duration], initial, t_eval=np.arange(0, self.duration, 1))
 
 
 
