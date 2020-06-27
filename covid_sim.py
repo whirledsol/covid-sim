@@ -16,8 +16,8 @@ from sir_model import SIR
 import calendar
 
 warnings.simplefilter("ignore", OptimizeWarning)
-COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "Japan":126860301, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047}
-COUNTRY_COLORS =  {'China':'orange','US':'blue','Japan':'yellow','United Kingdom':'purple', 'Italy':'green', 'Canada':'red'}
+COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "United Kingdom":67530172, "Italy":60550075, "Canada":37411047, "Brazil":212516958}
+COUNTRY_COLORS =  {'China':'orange','US':'blue','Brazil':'yellow','United Kingdom':'purple', 'Italy':'green', 'Canada':'red'}
 STATE_POPULATIONS = {"California":39512223,"Texas":28995881,"Florida":21477737,"New York":19453561,"Pennsylvania":12801989,"Illinois":12671821,"Ohio":11689100,"Georgia":10617423,"North Carolina":10488084,"Michigan":9986857,"New Jersey":8882190,"Virginia":8535519,"Washington":7614893,"Arizona":7278717,"Massachusetts":6949503,"Tennessee":6833174,"Indiana":6732219,"Missouri":6137428,"Maryland":6045680,"Wisconsin":5822434,"Colorado":5758736,"Minnesota":5639632,"South Carolina":5148714,"Alabama":4903185,"Louisiana":4648794,"Kentucky":4467673,"Oregon":4217737,"Oklahoma":3956971,"Connecticut":3565287,"Utah":3205958,"Puerto Rico":3193694,"Iowa":3155070,"Nevada":3080156,"Arkansas":3017825,"Mississippi":2976149,"Kansas":2913314,"New Mexico":2096829,"Nebraska":1934408,"West Virginia":1792065,"Idaho":1787147,"Hawaii":1415872,"New Hampshire":1359711,"Maine":1344212,"Montana":1068778,"Rhode Island":1059361,"Delaware":973764,"South Dakota":884659,"North Dakota":762062,"Alaska":731545,"District of Columbia":705749,"Vermont":623989,"Wyoming":578759}
 
 logistic = lambda x,l,k,o: l / (1 + numpy.exp(k*(o-x)))
@@ -40,24 +40,28 @@ def start():
     PATH_TIME_CONFIRMED_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
     PATH_TIME_DEATHS_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
 
-    important_states = ['New York','New Jersey','Pennsylvania','Ohio']
+    important_states = ['New York','New Jersey','Pennsylvania']
    
-    custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL)
-    
-    #custom_trend_us(PATH_TIME_CONFIRMED_US,important_states)
-
-    custom_delta_us_county(PATH_TIME_CONFIRMED_US, 'Bucks','Pennsylvania','Confirmed')
-
-    custom_delta_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
-
-    custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
-    
     custom_deathrate_global(PATH_TIME_CONFIRMED_GLOBAL,PATH_TIME_DEATHS_GLOBAL)
     
     custom_deathrate_us(PATH_TIME_CONFIRMED_US,PATH_TIME_DEATHS_US,important_states)
 
+    custom_zero_global(PATH_TIME_CONFIRMED_GLOBAL)
+    
+    #custom_delta_global(PATH_TIME_CONFIRMED_GLOBAL,'China','Confirmed')
+
+#    custom_trend_us(PATH_TIME_CONFIRMED_US,important_states)
+
+    custom_delta_us_county(PATH_TIME_CONFIRMED_US, 'Bucks','Pennsylvania','Confirmed')
+
+#    custom_delta_us(PATH_TIME_CONFIRMED_US,important_states,'Confirmed')
+
+    custom_new_us(PATH_TIME_CONFIRMED_US,important_states)
 
     custom_map_us(PATH_TIME_CONFIRMED_US)
+
+    custom_mapnew_us(PATH_TIME_CONFIRMED_US)
+    
 
 def custom_all_us_county(c_path,d_path,county,state,label, min_cases=100):
     '''
@@ -88,6 +92,7 @@ def custom_delta_us_county(path,county,state,label):
     '''
     x,y = parse_time_us_county(path,county,state)
     graph_delta(x,y,f"{county}, {state}",label)
+    plt.show()
 
 def custom_delta_us(path,states,label):
     '''
@@ -96,6 +101,15 @@ def custom_delta_us(path,states,label):
     for state in states:
         x,y = parse_time_us(path,state)
         graph_delta(x,y,state,label)
+        plt.show()
+
+def custom_delta_global(path,country,label):
+    '''
+    Shows trend over time for various states
+    '''
+    x,y = parse_time_global(path,country)
+    ax = graph_delta(x,y,country,label)
+    plt.show()
 
 def custom_trend_us(path,states,threshold=100):
     '''
@@ -215,6 +229,22 @@ def custom_map_us(path):
         y = [i/population for i in y if i>0]
         states[state] = max(y) if len(y) > 0 else 0
     us_map(states,'Percentage of State Population Infected',formatter='{0:.6f}')
+
+def custom_mapnew_us(path,min_cases=0):
+    '''
+    Shows percent of state affected on map. Redder is bad.
+    '''
+    states = {}
+    for state,population in STATE_POPULATIONS.items():
+        x,y = parse_time_us(path,state)
+        y = [v-y[i-1] for i, v in enumerate(y) if v>min_cases and i>min_cases]
+        y = y[-7:]
+        x = x[-7:]
+        fromDate = min(x).strftime("%b %d, %Y")
+        toDate = max(x).strftime("%b %d, %Y")
+        states[state] = sum(y)/population*100 if len(y) > 0 else 0
+    us_map(states,f'New Cases as Percent of Population\n{fromDate}-{toDate}',formatter='{0:.2f}%')
+
 
 def custom_fit_us(path,OUTPUT_BASE,check_states=[],min_days=5, min_cases=500):
     '''
@@ -451,7 +481,7 @@ def graph_delta(x,y,location,label,threshold=100):
     ax.set_title(f'{label} Trend in {location}')
     #ax.set_yscale('log')
 
-    plt.show()
+    return ax
     
 def cmap(value,mn,mx):
     value = numpy.abs(value)

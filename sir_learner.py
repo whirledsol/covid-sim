@@ -35,9 +35,10 @@ def loss(point, confirmed, recovered, I_0):
     RMSE between actual confirmed cases and the estimated infectious people with given beta and gamma.
     """
     size = len(confirmed)
-    S_0, beta, gamma = point
+    S_0, confirmed_mult, beta, gamma = point
     
     initial = [S_0,I_0,0]
+    confirmed = confirmed.apply(lambda x: x*confirmed_mult)
 
     def SIR(t, y):
         S = y[0]
@@ -50,11 +51,12 @@ def loss(point, confirmed, recovered, I_0):
     l2 = np.sqrt(np.mean((solution.y[2] - recovered)**2))      
     l1 = np.sqrt(np.mean((solution.y[1] - confirmed)**2))
     # Put more emphasis on recovered people
-    alpha = 0.9
+    alpha = 0.20
     return alpha * l1 + (1 - alpha) * l2
 
 class SirLearner(object):
-    def __init__(self, path_confirmed,path_recovered, path_deaths,country, normalization_constant=COUNTRY_POPULATIONS['US'], I_0_std = 1000, duration=360):
+    def __init__(self, path_confirmed,path_recovered, path_deaths,country, normalization_constant=COUNTRY_POPULATIONS['US'], I_0_std = 50, duration=360):
+
         self.path_confirmed = path_confirmed
         self.path_recovered = path_recovered
         self.path_deaths = path_deaths
@@ -89,16 +91,22 @@ class SirLearner(object):
         print(f'Starting minimize on {start}')
         optimal = differential_evolution(
             loss,
-            [(S_0_min,S_0_max),(0.0000005, 1), (0.0000005, 1)],
+            [
+                (S_0_min,S_0_max),
+                (4,5),
+                (0.0000005, 2),
+                (0.0000005, 2)
+            ],
             args=(confirmed,recovered,self.I_0),
             callback=minimize_callback
         )
-        S_0, beta, gamma = optimal.x
+        S_0, confirmed_mult, beta, gamma = optimal.x
         stop = datetime.now()
         elapsed = (stop-start).total_seconds()
-        print(f'After {elapsed}s and {itterations} itterations, found S_0={S_0}, beta={beta}, gamma={gamma} for R_0={beta/gamma}')
+        print(f'After {elapsed}s and {itterations} itterations, found S_0={S_0}, confirmed_mult={confirmed_mult}, beta={beta}, gamma={gamma} for R_0={beta/gamma}')
         
         #run simulation
+        confirmed = confirmed.apply(lambda x: x*confirmed_mult)
         prediction = self.predict(S_0, beta, gamma)
 
         #resize these objects
