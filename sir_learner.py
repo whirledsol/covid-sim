@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-taken from https://www.lewuathe.com/covid-19-dynamics-with-sir-model.html
+sir_learner.py
+original source https://www.lewuathe.com/covid-19-dynamics-with-sir-model.html
 """
 import os
 import numpy as np
