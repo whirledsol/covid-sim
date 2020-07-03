@@ -7,6 +7,9 @@ The recent Coronavirus Pandemic is a new part of our daily lives. It is here to 
 ## Intent
 This project was designed to get an raw, unbiased view of the virus's spread. It also gives a semblance of control when, as individuals, we have little impact on mitigating the virus. Python was chosen as a "quick and dirty" way to manipulate the data. I don't anticipate much feedback, but I do appreciate you taking an interest in one my side projects.
 
+## The Data
+These modules assume the data is cloned from the [CSSEGISandData repo](https://github.com/CSSEGISandData/COVID-19) into the parent directory. See Setup Instructions below.
+
 ## Instructions
 
 ### Setup
@@ -21,9 +24,6 @@ git clone https://github.com/CSSEGISandData/COVID-19.git ../COVID-19
 ./update_repo.sh
 ./covid_sim.py
 ```
-
-## The Data
-These modules assume the data is cloned from the [CSSEGISandData repo](https://github.com/CSSEGISandData/COVID-19) into the parent directory.
 
 ## covid_sim.py: An assortment of visualizations
 
