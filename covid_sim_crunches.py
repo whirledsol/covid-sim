@@ -8,6 +8,30 @@ from covid_sim_base import *
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
+def crunch_deathrate_global(c_path,d_path,country, min_cases=100):
+    '''
+    graphs the death rate over time for country
+    shows how we are handling pandemic
+    hypothesis: should stay level or improve if new treatments found
+    '''
+    cx,cy = parse_time_global(c_path,country)
+    cy = [i for i in cy if i>min_cases]
+    cx = cx[-len(cy):]
+
+    dx,dy = parse_time_global(d_path,country)
+    dy = dy[-len(cy):]
+
+    ry = [dy[i]/cy[i] for i in range(len(cy))]
+    
+    latest = ry[-1:][0]
+    
+    _, ax = plt.subplots()
+    ax.set_title('Death Rate in {0}, currently {1:0.3f}'.format(country,latest))
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Rate')
+    
+    ax.plot(cx,ry,c=numpy.random.rand(3,),linewidth=2)
+
 def crunch_basic_county(c_path,d_path,county,state,label, min_cases=100):
     '''
     Graphs confirmed and deaths for one county
@@ -83,7 +107,7 @@ def crunch_trend_us(path,states,threshold=100):
         
         plt.show()
 
-def crunch_deathrate_us(path,deathpath,important_states):
+def crunch_deathratemd_us(path,deathpath,important_states):
     '''
     Creates a markdown graph which shows the current deathrate by state
     '''
@@ -103,7 +127,7 @@ def crunch_deathrate_us(path,deathpath,important_states):
         print('|{0}|{1:0.6f}|{2:0.6f}|'.format(state,cpersent[state],rate))
     print('\n')
     
-def crunch_deathrate_global(path,deathpath):
+def crunch_deathratemd_global(path,deathpath):
     '''
     Creates a markdown graph which shows the current deathrate by country
     '''

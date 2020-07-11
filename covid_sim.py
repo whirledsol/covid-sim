@@ -18,9 +18,8 @@ def start():
     PATH_C_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
     PATH_D_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
 
-    crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL)
-    
-    crunch_deathrate_us(PATH_C_US,PATH_D_US,important_states)
+
+    crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')
 
     crunch_zero_global(PATH_C_GLOBAL)
     
