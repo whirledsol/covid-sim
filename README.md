@@ -15,8 +15,7 @@ These modules assume the data is cloned from the [CSSEGISandData repo](https://g
 ### Setup
 ```bash
 #!/bin/bash
-pip install -r requirements.txt
-git clone https://github.com/CSSEGISandData/COVID-19.git ../COVID-19
+./setup.sh
 ```
 ### Run
 ```bash

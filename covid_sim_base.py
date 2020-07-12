@@ -9,6 +9,7 @@ import matplotlib.dates as mdates
 from scipy.optimize import curve_fit
 import cartopy.crs as ccrs
 import cartopy.io.shapereader as shpreader
+import cartopy.feature as cfeature
 
 
 
@@ -101,6 +102,46 @@ def graph_fit(x,y,func,title=''):
     ax.set_title(title)
     plt.show()
 
+
+def us_map_county(counties = {}, county_data_file='./assets/countyl010g.shp'):
+    '''
+    shows a US map with counties! Hot dog!
+    '''
+
+    try:
+        reader = shpreader.Reader(county_data_file)
+    except Exception as ex:
+        print(f'Ensure {county_data_file} is installed.')
+        raise ex
+
+    counties = list(reader.geometries())
+
+    COUNTIES = cfeature.ShapelyFeature(counties, ccrs.PlateCarree())
+
+    plt.figure(figsize=(10, 6))
+    ax = plt.axes(projection=ccrs.PlateCarree())
+
+    for county in COUNTIES:
+        try:
+            value = counties[state.attributes['name']]
+        except:
+            value = mn
+
+        facecolor = cmap(value,mn,mx)
+
+        ax.add_geometries([county.geometry], ccrs.PlateCarree(),
+                        facecolor=facecolor, edgecolor=edgecolor)
+
+    #ax.add_feature(COUNTIES, facecolor='none', edgecolor='gray')
+    ax.add_feature(cfeature.LAND.with_scale('50m'))
+    ax.add_feature(cfeature.OCEAN.with_scale('50m'))
+    ax.add_feature(cfeature.LAKES.with_scale('50m'))
+    ax.coastlines('50m')
+
+    #ax.set_extent([-83, -65, 33, 44])
+    plt.show()
+
+
 def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
     '''
     show a us map with state color highlighting
@@ -146,7 +187,12 @@ def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
             x = state.geometry.centroid.x        
             y = state.geometry.centroid.y
             ax.text(x, y, formatter.format(value),size=7, color='blue', ha='center', va='center', transform=ccrs.PlateCarree())   
-            
+
+    ax.add_feature(cfeature.LAND.with_scale('50m'))
+    ax.add_feature(cfeature.OCEAN.with_scale('50m'))
+    ax.add_feature(cfeature.LAKES.with_scale('50m'))
+    ax.coastlines('50m')
+
     plt.show()
 
 

@@ -17,7 +17,9 @@ def start():
     PATH_R_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_recovered_global.csv')
     PATH_C_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
     PATH_D_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
-
+    
+    us_map_county()
+    exit()
 
     crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')
 
