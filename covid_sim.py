@@ -10,7 +10,7 @@ from covid_sim_crunches import *
 
 
 def start():
-    PATH_BASE = os.path.expanduser('~/projects/COVID-19/csse_covid_19_data/csse_covid_19_time_series')
+    PATH_BASE = '../COVID-19/csse_covid_19_data/csse_covid_19_time_series'
     OUTPUT_BASE = './out/'
     PATH_C_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
     PATH_D_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_deaths_global.csv')
@@ -18,8 +18,7 @@ def start():
     PATH_C_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
     PATH_D_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
     
-    us_map_county()
-    exit()
+    crunch_map_county(PATH_C_US, "Pennsylvania")
 
     crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')
 

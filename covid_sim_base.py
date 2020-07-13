@@ -17,6 +17,12 @@ COUNTRY_POPULATIONS = {"China":1433783686, "US":329064917, "United Kingdom":6753
 COUNTRY_COLORS =  {'China':'orange','US':'blue','Brazil':'yellow','United Kingdom':'purple', 'Italy':'green', 'Canada':'red'}
 STATE_POPULATIONS = {"California":39512223,"Texas":28995881,"Florida":21477737,"New York":19453561,"Pennsylvania":12801989,"Illinois":12671821,"Ohio":11689100,"Georgia":10617423,"North Carolina":10488084,"Michigan":9986857,"New Jersey":8882190,"Virginia":8535519,"Washington":7614893,"Arizona":7278717,"Massachusetts":6949503,"Tennessee":6833174,"Indiana":6732219,"Missouri":6137428,"Maryland":6045680,"Wisconsin":5822434,"Colorado":5758736,"Minnesota":5639632,"South Carolina":5148714,"Alabama":4903185,"Louisiana":4648794,"Kentucky":4467673,"Oregon":4217737,"Oklahoma":3956971,"Connecticut":3565287,"Utah":3205958,"Puerto Rico":3193694,"Iowa":3155070,"Nevada":3080156,"Arkansas":3017825,"Mississippi":2976149,"Kansas":2913314,"New Mexico":2096829,"Nebraska":1934408,"West Virginia":1792065,"Idaho":1787147,"Hawaii":1415872,"New Hampshire":1359711,"Maine":1344212,"Montana":1068778,"Rhode Island":1059361,"Delaware":973764,"South Dakota":884659,"North Dakota":762062,"Alaska":731545,"District of Columbia":705749,"Vermont":623989,"Wyoming":578759}
 
+COUNTY_NAMES = {
+    "Pennsylvania":['Adams','Allegheny','Armstrong','Beaver','Bedford','Berks','Blair','Bradford','Bucks','Butler','Cambria','Cameron','Carbon','Centre','Chester','Clarion','Clearfield','Clinton','Columbia','Crawford','Cumberland','Dauphin','Delaware','Elk','Erie','Fayette','Forest','Franklin','Fulton','Greene','Huntingdon','Indiana','Jefferson','Juniata','Lackawanna','Lancaster','Lawrence','Lebanon','Lehigh','Luzerne','Lycoming','McKean','Mercer','Mifflin','Monroe','Montgomery','Montour','Northampton','Northumberland','Perry','Philadelphia','Pike','Potter','Schuylkill','Snyder','Somerset','Sullivan','Susquehanna','Tioga','Union','Venango','Warren','Washington','Wayne','Westmoreland','Wyoming','York'],
+    
+    "New Jersey":['Atlantic','Bergen','Burlington','Camden','Cape May','Cumberland','Essex','Gloucester','Hudson','Hunterdon','Mercer','Middlesex','Monmouth','Morris','Ocean','Passaic','Salem','Somerset','Sussex','Union','Warren']
+}
+
 important_states = ['New York','New Jersey','Pennsylvania']
    
 
@@ -103,7 +109,7 @@ def graph_fit(x,y,func,title=''):
     plt.show()
 
 
-def us_map_county(counties = {}, county_data_file='./assets/countyl010g.shp'):
+def us_map_county(county_data, county_data_file='./assets/us_counties_2018/cb_2018_us_county_20m.shp'):
     '''
     shows a US map with counties! Hot dog!
     '''
@@ -114,31 +120,29 @@ def us_map_county(counties = {}, county_data_file='./assets/countyl010g.shp'):
         print(f'Ensure {county_data_file} is installed.')
         raise ex
 
-    counties = list(reader.geometries())
-
-    COUNTIES = cfeature.ShapelyFeature(counties, ccrs.PlateCarree())
-
+    counties = list(reader.records())
+    
     plt.figure(figsize=(10, 6))
     ax = plt.axes(projection=ccrs.PlateCarree())
+    
+    #get min and max
+    mn = min(county_data.values())
+    mx = max(county_data.values())
+    edgecolor = 'black'
 
-    for county in COUNTIES:
+    #itterate
+    for county in counties:
+        #print(county.attributes)
         try:
-            value = counties[state.attributes['name']]
+            value = county_data[county.attributes['NAME']]
         except:
-            value = mn
+            continue
 
         facecolor = cmap(value,mn,mx)
 
         ax.add_geometries([county.geometry], ccrs.PlateCarree(),
                         facecolor=facecolor, edgecolor=edgecolor)
 
-    #ax.add_feature(COUNTIES, facecolor='none', edgecolor='gray')
-    ax.add_feature(cfeature.LAND.with_scale('50m'))
-    ax.add_feature(cfeature.OCEAN.with_scale('50m'))
-    ax.add_feature(cfeature.LAKES.with_scale('50m'))
-    ax.coastlines('50m')
-
-    #ax.set_extent([-83, -65, 33, 44])
     plt.show()
 
 
@@ -159,6 +163,7 @@ def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
     ax.set_title(title)
     mn = min(states.values())
     mx = max(states.values())
+    edgecolor = 'black'
 
     #find the min value that we will display text values for
     text_top = min(text_top,len(states.values()))
@@ -167,9 +172,6 @@ def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
     text_threshold = min(text_threshold[-text_top:])
 
     for state in shpreader.Reader(states_shp).records():
-
-        edgecolor = 'black'
-
         try:
             value = states[state.attributes['name']]
         except:
@@ -187,11 +189,6 @@ def us_map(states,title = '',text_top=5,formatter = '{0:.3f}'):
             x = state.geometry.centroid.x        
             y = state.geometry.centroid.y
             ax.text(x, y, formatter.format(value),size=7, color='blue', ha='center', va='center', transform=ccrs.PlateCarree())   
-
-    ax.add_feature(cfeature.LAND.with_scale('50m'))
-    ax.add_feature(cfeature.OCEAN.with_scale('50m'))
-    ax.add_feature(cfeature.LAKES.with_scale('50m'))
-    ax.coastlines('50m')
 
     plt.show()
 
@@ -224,7 +221,7 @@ def cmap(value,mn,mx):
     value = numpy.abs(value)
     mn = numpy.abs(mn)
     mx = numpy.abs(mx)
-    bg = 1-((value-mn)/(mx-mn)) #pow(scale,1-normalized)/scale
+    bg = 1-((value-mn)/((mx-mn)+0.000000001)) #pow(scale,1-normalized)/scale
     return [1,bg,bg]
 
 def axFormatDate(ax):

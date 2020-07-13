@@ -8,6 +8,17 @@ from covid_sim_base import *
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
+def crunch_map_county(c_path,state):
+    '''
+    shows confirmed counts for all counties in a state by county name
+    DISCLAIMER: county names for state need to be defined in covid_sim_base
+    '''
+    county_data = {}
+    for county in COUNTY_NAMES[state]:
+        cx,cy = parse_time_county(c_path,county,state)
+        county_data[county] = max(cy)
+    us_map_county(county_data)
+
 def crunch_deathrate_global(c_path,d_path,country, min_cases=100):
     '''
     graphs the death rate over time for country
@@ -36,7 +47,7 @@ def crunch_basic_county(c_path,d_path,county,state,label, min_cases=100):
     '''
     Graphs confirmed and deaths for one county
     '''
-    cx,cy = parse_time_us_county(c_path,county,state)
+    cx,cy = parse_time_county(c_path,county,state)
     cy = [i for i in cy if i>min_cases]
     cx = cx[-len(cy):]
 
