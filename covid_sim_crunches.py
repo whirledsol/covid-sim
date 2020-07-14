@@ -8,6 +8,20 @@ from covid_sim_base import *
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
+def crunch_map_delta_county(c_path,state,days=7):
+    '''
+    shows percent increase in past {days} for each county in state
+    DISCLAIMER: county names for state need to be defined in covid_sim_base
+    '''
+    county_data = {}
+    for county in COUNTY_NAMES[state]:
+        cx,cy = parse_time_county(c_path,county,state)
+        county_data[county] = (cy[-1]-cy[-days])/cy[-1]
+
+    toDate = cx[-1].strftime("%b %d, %Y")
+    fromDate = cx[-days].strftime("%b %d, %Y")
+    us_map_county(county_data,state, f'Percent Increase Per County in {state}\n{fromDate}-{toDate}')
+
 def crunch_map_county(c_path,state):
     '''
     shows confirmed counts for all counties in a state by county name
@@ -16,8 +30,8 @@ def crunch_map_county(c_path,state):
     county_data = {}
     for county in COUNTY_NAMES[state]:
         cx,cy = parse_time_county(c_path,county,state)
-        county_data[county] = max(cy)
-    us_map_county(county_data)
+        county_data[county] = cy[-1]
+    us_map_county(county_data, f'Confirmed Cases Per County in {state}')
 
 def crunch_deathrate_global(c_path,d_path,country, min_cases=100):
     '''
