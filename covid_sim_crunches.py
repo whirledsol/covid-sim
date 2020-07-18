@@ -8,7 +8,7 @@ from covid_sim_base import *
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-def crunch_map_delta_county(c_path,state,days=7):
+def crunch_map_per_county(c_path,state,days=7, min_cases=100):
     '''
     shows percent increase in past {days} for each county in state
     DISCLAIMER: county names for state need to be defined in covid_sim_base
@@ -16,11 +16,16 @@ def crunch_map_delta_county(c_path,state,days=7):
     county_data = {}
     for county in COUNTY_NAMES[state]:
         cx,cy = parse_time_county(c_path,county,state)
-        county_data[county] = (cy[-1]-cy[-days])/cy[-1]
+        cy = [i for i in cy if i>min_cases]
+        cy.insert(0,min_cases) #insert to prevent len == 0
+        confirmed_f = cy[-1]
+        confirmed_i = cy[-days] if len(cy) > days else cy[0]
+        county_data[county] = (confirmed_f-confirmed_i)/confirmed_i*100
 
     toDate = cx[-1].strftime("%b %d, %Y")
     fromDate = cx[-days].strftime("%b %d, %Y")
-    us_map_county(county_data,state, f'Percent Increase Per County in {state}\n{fromDate}-{toDate}')
+    title =  f'Percent Increase Per County in {state}\n{fromDate}-{toDate}'
+    us_map_county(county_data,state,title,formatter='{0:.2f}%')
 
 def crunch_map_county(c_path,state):
     '''
@@ -32,6 +37,32 @@ def crunch_map_county(c_path,state):
         cx,cy = parse_time_county(c_path,county,state)
         county_data[county] = cy[-1]
     us_map_county(county_data, f'Confirmed Cases Per County in {state}')
+
+
+def crunch_deathrate_us(c_path,d_path,state, min_cases=100):
+    '''
+    graphs the death rate over time for state
+    shows how we are handling pandemic
+    hypothesis: should stay level or improve if new treatments found
+    '''
+    cx,cy = parse_time_us(c_path,state)
+    cy = [i for i in cy if i>min_cases]
+    cx = cx[-len(cy):]
+
+    dx,dy = parse_time(d_path,state,6,12)
+    dy = dy[-len(cy):]
+
+    ry = [dy[i]/cy[i] for i in range(len(cy))]
+    
+    latest = ry[-1:][0]
+
+    _, ax = plt.subplots()
+    ax.set_title('Death Rate in {0}, currently {1:0.3f}'.format(state,latest))
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Rate')
+    
+    ax.plot(cx,ry,c=numpy.random.rand(3,),linewidth=2)
+    plt.show()
 
 def crunch_deathrate_global(c_path,d_path,country, min_cases=100):
     '''
@@ -56,6 +87,7 @@ def crunch_deathrate_global(c_path,d_path,country, min_cases=100):
     ax.set_ylabel('Rate')
     
     ax.plot(cx,ry,c=numpy.random.rand(3,),linewidth=2)
+    plt.show()
 
 def crunch_basic_county(c_path,d_path,county,state,label, min_cases=100):
     '''
@@ -80,59 +112,49 @@ def crunch_basic_county(c_path,d_path,county,state,label, min_cases=100):
     ax.set_yscale('log')
     plt.show()
 
-def crunch_delta_county(path,county,state,label):
+def crunch_new_county(path,county,state,label):
     '''
     Shows trend over time for one county
     '''
     x,y = parse_time_county(path,county,state)
-    graph_delta(x,y,f"{county}, {state}",label)
+    graph_new(x,y,f"{county}, {state}",label)
     plt.show()
 
-def crunch_delta_us(path,states,label):
-    '''
-    Shows trend over time for various states
-    '''
-    for state in states:
-        x,y = parse_time_us(path,state)
-        graph_delta(x,y,state,label)
-        plt.show()
-
-def crunch_delta_global(path,country,label):
+def crunch_new_global(path,country,label):
     '''
     Shows trend over time for various states
     '''
     x,y = parse_time_global(path,country)
-    ax = graph_delta(x,y,country,label)
+    ax = graph_new(x,y,country,label)
     plt.show()
 
-def crunch_trend_us(path,states,threshold=100):
+def crunch_trend_us(path,state,threshold=100):
     '''
     Shows the changes for each day of the week to see if there is a weekly trend
     '''
-    for state in states:
-        x,y = parse_time_us(path,state)
-        y = [v for v in y if v>threshold]
-        x = x[-len(y):]
-        dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
-        x = [d.weekday() for d in x]
+    x,y = parse_time_us(path,state)
+    y = [v for v in y if v>threshold]
+    x = x[-len(y):]
+    dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
+    x = [d.weekday() for d in x]
 
-        bins = [[] for i in range(7)]
+    bins = [[] for i in range(7)]
 
-        for i in range(len(x)):
-            bins[x[i]].append(dy[i])
-        
-        _, ax = plt.subplots()
+    for i in range(len(x)):
+        bins[x[i]].append(dy[i])
+    
+    _, ax = plt.subplots()
 
-        ax.boxplot(bins)
-        ax.set_title(f'Weekly Trend of New Cases in {state}')
-        ax.set_xlabel('Day of Week')
-        ax.set_ylabel('New Cases')
-        toCalendarDay = lambda x, pos:calendar.day_name[x-1]
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(toCalendarDay))
-        
-        plt.show()
+    ax.boxplot(bins)
+    ax.set_title(f'Weekly Trend of New Cases in {state}')
+    ax.set_xlabel('Day of Week')
+    ax.set_ylabel('New Cases')
+    toCalendarDay = lambda x, pos:calendar.day_name[x-1]
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(toCalendarDay))
+    
+    plt.show()
 
-def crunch_deathratemd_us(path,deathpath,important_states):
+def crunch_deathratemd_us(c_path,d_path,important_states):
     '''
     Creates a markdown graph which shows the current deathrate by state
     '''
@@ -140,8 +162,8 @@ def crunch_deathratemd_us(path,deathpath,important_states):
     drates = {}
     for state in important_states:
         population = STATE_POPULATIONS[state]
-        _,y = parse_time_us(path,state)
-        _,dy = parse_time(deathpath,state,6,12)
+        _,y = parse_time_us(c_path,state)
+        _,dy = parse_time(d_path,state,6,12)
         latest = max(dy)/max(y)
         cpersent[state] = max(y)/population
         drates[state] = latest
@@ -152,15 +174,15 @@ def crunch_deathratemd_us(path,deathpath,important_states):
         print('|{0}|{1:0.6f}|{2:0.6f}|'.format(state,cpersent[state],rate))
     print('\n')
     
-def crunch_deathratemd_global(path,deathpath):
+def crunch_deathratemd_global(c_path,d_path):
     '''
     Creates a markdown graph which shows the current deathrate by country
     '''
     cpersent = {}
     drates = {}
     for country,population in COUNTRY_POPULATIONS.items():
-        _,y = parse_time_global(path,country)
-        _,dy = parse_time_global(deathpath,country)
+        _,y = parse_time_global(c_path,country)
+        _,dy = parse_time_global(d_path,country)
         latest = max(dy)/max(y)
         cpersent[country] = max(y)/population
         drates[country] = latest
@@ -171,37 +193,12 @@ def crunch_deathratemd_global(path,deathpath):
         print('|{0}|{1:0.6f}|{2:0.6f}|'.format(country,cpersent[country],rate))
     print('\n')
 
-def crunch_recovery_us(path,recoverypath,important_states):
-    '''
-    Shows percent of state vs percent of US over time
-    '''
-    for state in important_states:
-        _, ax = plt.subplots()
-        
-        x,y = parse_time_us(path,state)
-        rx,ry = parse_time_us(recoverypath,state)
-
-        date_first = x[y.index([i for i in y if i>0][0])]
-        ry = ry[rx.index(date_first):]
-        y = [i for i in y if i>0]
-        x = [i for i in x if i>=date_first]
-        
-        ax.set_title('US Cases and Recovery')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Incidents (Log Scale)')
-        
-        ax.plot(x,y,label='Cases',c=numpy.random.rand(3,),linewidth=2)
-        ax.plot(x,ry,label='Recovery',c=numpy.random.rand(3,),linewidth=1)
-        ax.legend()
-        ax.set_yscale('log')
-        plt.show()
-
-def crunch_new_us(path,check_states=[],min_cases=0):
+def crunch_new_us(path,states=[],min_cases=0):
     '''
     Shows the increase in cases since previous day for various states over time
     '''
     _, ax = plt.subplots()
-    for state in check_states:
+    for state in states:
         _,y = parse_time_us(path,state)
         y = [v-y[i-1] for i, v in enumerate(y) if v>min_cases and i>min_cases]
         x = range(len(y))
@@ -213,7 +210,7 @@ def crunch_new_us(path,check_states=[],min_cases=0):
     ax.legend()
     plt.show()       
 
-def crunch_map_us(path):
+def crunch_map_perpop_us(path):
     '''
     Shows percent of state affected on map. Redder is bad.
     '''
@@ -221,10 +218,10 @@ def crunch_map_us(path):
     for state,population in STATE_POPULATIONS.items():
         _,y = parse_time_us(path,state)
         y = [i/population for i in y if i>0]
-        states[state] = max(y) if len(y) > 0 else 0
-    us_map(states,'Percentage of State Population Infected',formatter='{0:.6f}')
+        states[state] = max(y)*100 if len(y) > 0 else 0
+    us_map(states,'Percentage of State Population Infected',formatter='{0:.2f}%')
 
-def crunch_mapnew_us(path,min_cases=0):
+def crunch_map_perpopnew_us(path,min_cases=0):
     '''
     Shows percent of state affected on map. Redder is bad.
     '''
