@@ -10,6 +10,7 @@ from covid_sim_crunches import *
 
 
 def start():
+    
     PATH_BASE = '../COVID-19/csse_covid_19_data/csse_covid_19_time_series'
     OUTPUT_BASE = './out/'
     PATH_C_GLOBAL = os.path.join(PATH_BASE,'time_series_covid19_confirmed_global.csv')
@@ -19,7 +20,7 @@ def start():
     PATH_D_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
     important_states = ['New York','New Jersey','Pennsylvania','Massachusetts']
 
-
+    
     crunch_zero_global(PATH_C_GLOBAL)
 
     crunch_new_county(PATH_C_US, 'Bucks','Pennsylvania','Confirmed')
@@ -31,7 +32,6 @@ def start():
     crunch_map_perpopnew_us(PATH_C_US)
 
     crunch_new_us(PATH_C_US,important_states)
-
 
     for state in important_states:
         crunch_map_per_county(PATH_C_US, state)

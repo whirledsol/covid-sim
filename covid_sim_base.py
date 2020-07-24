@@ -133,7 +133,7 @@ def us_map_county(county_data, state, title,text_top=5,formatter = '{0:.3f}', co
             continue
 
         facecolor = cmap(value,mn,mx)
-
+        
         ax.add_geometries([county.geometry], ccrs.PlateCarree(),
                         facecolor=facecolor, edgecolor=edgecolor)
         
@@ -218,12 +218,14 @@ def graph_new(x,y,location,label,threshold=100):
 
     return ax
     
+
 def cmap(value,mn,mx):
-    value = numpy.abs(value)
-    mn = numpy.abs(mn)
-    mx = numpy.abs(mx)
+    mn = 0 if mn < 0 else mn
+    mx = 0 if mx < 0 else mx
+    value = 0 if value < 0 else value
     bg = 1-((value-mn)/((mx-mn)+0.000000001)) #pow(scale,1-normalized)/scale
     return [1,bg,bg]
+
 
 def axFormatDate(ax):
     ax.xaxis.set_major_locator(mdates.MonthLocator())
