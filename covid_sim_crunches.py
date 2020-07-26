@@ -1,5 +1,5 @@
 """
-covid_sim_base.py
+covid_sim_crunches.py
 quick crunches of the data
 @author: whirledsol
 """
@@ -39,13 +39,13 @@ def crunch_map_county(c_path,state):
     us_map_county(county_data, f'Confirmed Cases Per County in {state}')
 
 
-def crunch_deathrate_us(c_path,d_path,state, min_cases=100):
+def crunch_deathrate_states(c_path,d_path,state, min_cases=100):
     '''
     graphs the death rate over time for state
     shows how we are handling pandemic
     hypothesis: should stay level or improve if new treatments found
     '''
-    cx,cy = parse_time_us(c_path,state)
+    cx,cy = parse_time_states(c_path,state)
     cy = [i for i in cy if i>min_cases]
     cx = cx[-len(cy):]
 
@@ -128,11 +128,11 @@ def crunch_new_global(path,country,label):
     ax = graph_new(x,y,country,label)
     plt.show()
 
-def crunch_trend_us(path,state,threshold=100):
+def crunch_trend_states(path,state,threshold=100):
     '''
     Shows the changes for each day of the week to see if there is a weekly trend
     '''
-    x,y = parse_time_us(path,state)
+    x,y = parse_time_states(path,state)
     y = [v for v in y if v>threshold]
     x = x[-len(y):]
     dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
@@ -154,7 +154,7 @@ def crunch_trend_us(path,state,threshold=100):
     
     plt.show()
 
-def crunch_deathratemd_us(c_path,d_path,important_states):
+def crunch_deathratemd_states(c_path,d_path,important_states):
     '''
     Creates a markdown graph which shows the current deathrate by state
     '''
@@ -162,7 +162,7 @@ def crunch_deathratemd_us(c_path,d_path,important_states):
     drates = {}
     for state in important_states:
         population = STATE_POPULATIONS[state]
-        _,y = parse_time_us(c_path,state)
+        _,y = parse_time_states(c_path,state)
         _,dy = parse_time(d_path,state,6,12)
         latest = max(dy)/max(y)
         cpersent[state] = max(y)/population
@@ -193,13 +193,13 @@ def crunch_deathratemd_global(c_path,d_path):
         print('|{0}|{1:0.6f}|{2:0.6f}|'.format(country,cpersent[country],rate))
     print('\n')
 
-def crunch_new_us(path,states=[],min_cases=0):
+def crunch_new_states(path,states=[],min_cases=0):
     '''
     Shows the increase in cases since previous day for various states over time
     '''
     _, ax = plt.subplots()
     for state in states:
-        _,y = parse_time_us(path,state)
+        _,y = parse_time_states(path,state)
         y = [v-y[i-1] for i, v in enumerate(y) if v>min_cases and i>min_cases]
         x = range(len(y))
         ax.plot(x,y,c=numpy.random.rand(3,),label=state)
@@ -210,24 +210,24 @@ def crunch_new_us(path,states=[],min_cases=0):
     ax.legend()
     plt.show()       
 
-def crunch_map_perpop_us(path):
+def crunch_map_perpop_states(path):
     '''
     Shows percent of state affected on map. Redder is bad.
     '''
     states = {}
     for state,population in STATE_POPULATIONS.items():
-        _,y = parse_time_us(path,state)
+        _,y = parse_time_states(path,state)
         y = [i/population for i in y if i>0]
         states[state] = max(y)*100 if len(y) > 0 else 0
     us_map(states,'Percentage of State Population Infected',formatter='{0:.2f}%')
 
-def crunch_map_perpopnew_us(path,min_cases=0):
+def crunch_map_perpopnew_states(path,min_cases=0):
     '''
     Shows percent of state affected on map. Redder is bad.
     '''
     states = {}
     for state,population in STATE_POPULATIONS.items():
-        x,y = parse_time_us(path,state)
+        x,y = parse_time_states(path,state)
         y = [v-y[i-1] for i, v in enumerate(y) if v>min_cases and i>min_cases]
         y = y[-7:]
         x = x[-7:]
@@ -237,7 +237,7 @@ def crunch_map_perpopnew_us(path,min_cases=0):
     us_map(states,f'New Cases as Percent of Population\n{fromDate}-{toDate}',formatter='{0:.2f}%')
 
 
-def crunch_fit_us(path,OUTPUT_BASE,check_states=[],min_days=5, min_cases=500):
+def crunch_fit_states(path,OUTPUT_BASE,check_states=[],min_days=5, min_cases=500):
     '''
     Fits data to curve, saves the best fit, displays base on map. Redder means high rate.
     '''
@@ -247,7 +247,7 @@ def crunch_fit_us(path,OUTPUT_BASE,check_states=[],min_days=5, min_cases=500):
 
     with open(outpath,'w') as f:
         for state,_ in list(STATE_POPULATIONS.items()):
-            _,y = parse_time_us(path,state)
+            _,y = parse_time_states(path,state)
             y = [i for i in y if i>min_cases]
             if(len(y)>min_days): #we need >3 days worth of data
                 #print(state)
@@ -286,7 +286,7 @@ def crunch_zero_global(path,min_cases=100):
     plt.show()
 
 
-def crunch_extrapolate_us(path,important_states,duration = 90):
+def crunch_extrapolate_states(path,important_states,duration = 90):
     '''
     Extrapolates the current data to fit func
     '''
@@ -294,7 +294,7 @@ def crunch_extrapolate_us(path,important_states,duration = 90):
 
     _, ax = plt.subplots()
     for i,state in enumerate(important_states):
-        x,y = parse_time_us(path,state)
+        x,y = parse_time_states(path,state)
         y = [i/STATE_POPULATIONS[state] for i in y if i>0]
         xd = x[-len(y):]
         x = range(len(y))

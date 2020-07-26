@@ -3,7 +3,7 @@ covid_sim_base.py
 common functions
 @author: whirledsol
 """
-import csv,datetime,numpy,matplotlib,calendar
+import csv,datetime,numpy,matplotlib,calendar,json,requests
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from scipy.optimize import curve_fit
@@ -20,10 +20,16 @@ FORMULAE = {
     expo:'$y={0:.3f}e^{{{1:.3f}x}}$'
 }
 
+def queryApi(endpoint, parameters={}):
+    res = requests.get(endpoint, params=parameters)
+    if res.status_code != 200:
+        raise Exception(f'Request failed with status {res.status_code}')
+    return json.loads(res.content)
+
 def parse_time_county(path,county,state):
     return parse_time(path,county,5,11,value2=state,value2_idx=6)
 
-def parse_time_us(path,state):
+def parse_time_states(path,state):
     return parse_time(path,state,6,11)
 
 def parse_time_global(path,country):
