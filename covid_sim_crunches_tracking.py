@@ -70,8 +70,8 @@ def crunch_perOutcomes_us(data,state=None):
     p2 = ax.bar(xs, hys, width=1)
     p3 = ax.bar(xs, dys, width=1)
 
-    ax.ylabel('Count')
-    ax.title('Positive Case Outcomes')
+    ax.set_ylabel('Count')
+    ax.set_title('Positive Case Outcomes')
     ax.legend((p1[0], p2[0], p3[0]),
     ('Positive', 'Hospitalized','Deaths'))
 
