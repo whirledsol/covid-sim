@@ -24,7 +24,7 @@ def start():
 
     CT_DATA_STATES = queryApi('https://covidtracking.com/api/v1/states/daily.json')
 
-    important_states = ['New York','New Jersey','Pennsylvania','Massachusetts']
+    important_states = ['Texas','New York','New Jersey','Pennsylvania']
 
     crunch_perPositive_us(CT_DATA_US)
     
@@ -41,7 +41,7 @@ def start():
     crunch_map_perpopnew_states(PATH_C_US)
 
     crunch_new_states(PATH_C_US,important_states)
-
+    
     for state in important_states:
         crunch_map_per_county(PATH_C_US, state)
         crunch_deathrate_states(PATH_C_US,PATH_D_US,state)
