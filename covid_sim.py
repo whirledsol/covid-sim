@@ -24,13 +24,14 @@ def start():
 
     CT_DATA_STATES = queryApi('https://covidtracking.com/api/v1/states/daily.json')
 
-    important_states = ['Texas','New York','New Jersey','Pennsylvania']
+    important_states = ['Pennsylvania','New Jersey']
 
     crunch_perPositive_us(CT_DATA_US)
+    crunch_perPositive_us(CT_DATA_STATES,'Pennsylvania')
     
-    crunch_perOutcomes_us(CT_DATA_US)
+    #crunch_perOutcomes_us(CT_DATA_US)
 
-    crunch_zero_global(PATH_C_GLOBAL)
+    #crunch_zero_global(PATH_C_GLOBAL)
 
     crunch_new_county(PATH_C_US, 'Bucks','Pennsylvania','Confirmed')
 

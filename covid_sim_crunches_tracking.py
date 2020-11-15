@@ -37,7 +37,7 @@ def crunch_perPositive_us(data,state=None):
 
     ax.set_xlabel('Date')
     ax.set_ylabel('Percentage')
-    ax.set_title('Percentage of Positive Cases')
+    ax.set_title(f"Percentage of Positive Cases {('' if state is None else state)}")
     axFormatDate(ax)
     plt.show()
 
