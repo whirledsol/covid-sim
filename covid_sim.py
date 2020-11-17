@@ -26,15 +26,17 @@ def start():
 
     important_states = ['Pennsylvania','New Jersey']
 
+    crunch_infectper_county(PATH_C_US, 'Bucks','Pennsylvania')
+    
     crunch_perPositive_us(CT_DATA_US)
     crunch_perPositive_us(CT_DATA_STATES,'Pennsylvania')
     
     #crunch_perOutcomes_us(CT_DATA_US)
 
     #crunch_zero_global(PATH_C_GLOBAL)
-
+    
     crunch_new_county(PATH_C_US, 'Bucks','Pennsylvania','Confirmed')
-
+    
     crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')    
 
     crunch_map_perpop_states(PATH_C_US)

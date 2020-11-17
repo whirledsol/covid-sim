@@ -120,6 +120,17 @@ def crunch_new_county(path,county,state,label):
     graph_new(x,y,f"{county}, {state}",label)
     plt.show()
 
+def crunch_infectper_county(path,county,state,days=14):
+    '''
+    Shows trend over time for one county
+    '''
+    x,y = parse_time_county(path,county,state)
+    location = f"{county}, {state}"
+    population = COUNTY_POPULATIONS[location] if location in COUNTY_POPULATIONS else 1
+    title =f"Percentage of County Population Infected ({days} days)\n{location}"
+    graph_sum(x,y,location,label,date_range=days, normalize=lambda x: x/population)
+    plt.show()
+
 def crunch_new_global(path,country,label):
     '''
     Shows trend over time for various states
@@ -219,7 +230,7 @@ def crunch_map_perpop_states(path):
         _,y = parse_time_states(path,state)
         y = [i/population for i in y if i>0]
         states[state] = max(y)*100 if len(y) > 0 else 0
-    us_map(states,'Percentage of State Population Infected',formatter='{0:.2f}%')
+    us_map(states,'Percentage of State Population Infected',formatter='{0:.2f}%',text_top=len(states))
 
 def crunch_map_perpopnew_states(path,min_cases=0):
     '''

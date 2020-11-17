@@ -224,7 +224,31 @@ def graph_new(x,y,location,label,threshold=100):
 
     return ax
     
+def graph_sum(x,y,location,title,threshold=100, date_range=14, normalize=None):
+    '''
+    Shows data, first, and second derivative
+    '''
+    y = [v for v in y if v>threshold]
+    dy = [0]+[y[i]-y[i-1] for i,v in enumerate(y) if i>0]
+    sy = [numpy.sum(dy[(i-date_range):i]) for i,v in enumerate(dy) if i>=date_range]
+    x = x[-len(sy):]
 
+    if normalize:
+        sy = [normalize(v) for v in sy]
+
+    _, ax = plt.subplots()
+    ax.plot(x,sy,c=numpy.random.rand(3,),linewidth=2)
+    
+    ax.plot(x,[0]*len(x),c='black',label='0',linewidth=1) #zero line
+    ax.legend()
+    ax.set_xlabel('Date')
+    axFormatDate(ax)
+    ax.set_ylabel('Number')
+    ax.set_title(title)
+    #ax.set_yscale('log')
+
+    return ax
+    
 def cmap(value,mn,mx):
     mn = 0 if mn < 0 else mn
     mx = 0 if mx < 0 else mx
