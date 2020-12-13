@@ -112,6 +112,31 @@ def crunch_basic_county(c_path,d_path,county,state,label, min_cases=100):
     ax.set_yscale('log')
     plt.show()
 
+def crunch_probability_county(path,county,state, days=3, max_people=20):
+    '''
+    using the last {days} days percentages,
+    calculates the probability of succeeding transmission after interactions with n people
+    uses binomial probability which is probably wrong
+    '''
+    d,p = parse_time_county(path,county,state)
+    date = d[-1].strftime("%b %d, %Y")
+    p = p[:-days]
+    location = f"{county}, {state}"
+    population = COUNTY_POPULATIONS[location] if location in COUNTY_POPULATIONS else 1
+    p = [v/population for v in p]
+    avg = numpy.mean(p)
+    fact = lambda f: numpy.math.factorial(f)
+    binomialp = numpy.vectorize(lambda n: (fact(n)/fact(n-1)) * avg * (1-avg)**(n-1))
+    x = numpy.arange(1,max_people)  
+    y = binomialp(x)
+
+    _, ax = plt.subplots()
+    ax.set_title(f'Probability of Infection for {county}, {state}\non {date}')
+    ax.set_xlabel('Number of People')
+    ax.set_ylabel('Probability')
+    plt.plot(x,y)
+    plt.show()
+
 def crunch_new_county(path,county,state,label):
     '''
     Shows trend over time for one county
@@ -128,7 +153,7 @@ def crunch_infectper_county(path,county,state,days=14):
     location = f"{county}, {state}"
     population = COUNTY_POPULATIONS[location] if location in COUNTY_POPULATIONS else 1
     title =f"Percentage of County Population Infected ({days} days)\n{location}"
-    graph_sum(x,y,location,label,date_range=days, normalize=lambda x: x/population)
+    graph_sum(x,y,title,date_range=days, normalize=lambda x: x/population)
     plt.show()
 
 def crunch_new_global(path,country,label):

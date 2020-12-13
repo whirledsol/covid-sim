@@ -26,8 +26,10 @@ def start():
 
     important_states = ['Pennsylvania','New Jersey']
 
+    crunch_probability_county(PATH_C_US, 'Bucks','Pennsylvania')
     crunch_infectper_county(PATH_C_US, 'Bucks','Pennsylvania')
     
+
     crunch_perPositive_us(CT_DATA_US)
     crunch_perPositive_us(CT_DATA_STATES,'Pennsylvania')
     

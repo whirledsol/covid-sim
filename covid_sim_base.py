@@ -224,7 +224,7 @@ def graph_new(x,y,location,label,threshold=100):
 
     return ax
     
-def graph_sum(x,y,location,title,threshold=100, date_range=14, normalize=None):
+def graph_sum(x,y,title,threshold=100, date_range=14, normalize=None):
     '''
     Shows data, first, and second derivative
     '''
