@@ -112,21 +112,23 @@ def crunch_basic_county(c_path,d_path,county,state,label, min_cases=100):
     ax.set_yscale('log')
     plt.show()
 
-def crunch_probability_county(path,county,state, days=3, max_people=20):
+def crunch_probability_county(path,county,state, avg_days=3, infection_period=20, max_people=20):
     '''
     using the last {days} days percentages,
     calculates the probability of succeeding transmission after interactions with n people
     uses binomial probability which is probably wrong
     '''
-    d,p = parse_time_county(path,county,state)
+    d,n = parse_time_county(path,county,state)
     date = d[-1].strftime("%b %d, %Y")
-    p = p[:-days]
+    confirmed_now = numpy.mean(n[-avg_days:])
+    confirmed_then = numpy.mean(n[len(n)-infection_period-avg_days: len(n) - infection_period])
+    suseptible = confirmed_now - confirmed_then    
     location = f"{county}, {state}"
     population = COUNTY_POPULATIONS[location] if location in COUNTY_POPULATIONS else 1
-    p = [v/population for v in p]
-    avg = numpy.mean(p)
+    p = suseptible/population
+    print(confirmed_now,'-',confirmed_then,'=',suseptible,'|',p)
     fact = lambda f: numpy.math.factorial(f)
-    binomialp = numpy.vectorize(lambda n: (fact(n)/fact(n-1)) * avg * (1-avg)**(n-1))
+    binomialp = numpy.vectorize(lambda n: (fact(n)/fact(n-1)) * p * (1-p)**(n-1))
     x = numpy.arange(1,max_people)  
     y = binomialp(x)
 
