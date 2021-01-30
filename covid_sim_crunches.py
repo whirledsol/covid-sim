@@ -7,6 +7,7 @@ import datetime,numpy,matplotlib
 from covid_sim_base import *
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+import itertools
 
 def crunch_map_per_county(c_path,state,days=7, min_cases=100):
     '''
@@ -303,19 +304,31 @@ def crunch_fit_states(path,OUTPUT_BASE,check_states=[],min_days=5, min_cases=500
     us_map(states,'Case Growth')
 
 
-def crunch_zero_global(path,min_cases=100):
+def crunch_zero_global(path,min_cases=100, population_threshold = 0, extreme_count  =None, keep=[]):
     '''
     Shows cases over time starting the day at least min_cases were hit for each country
     '''
     _, ax = plt.subplots()
     
+    data = {}
     for country,population in COUNTRY_POPULATIONS.items():
+        if population < population_threshold:
+            continue
         _,y = parse_time_global(path,country)
-        y = [i/population for i in y if i>min_cases]
+        data[country] = [i/population for i in y if i>min_cases]
+    
+    if extreme_count is not None:
+        data_sorted = sorted(data.items(),key=lambda x:x[1][-1:])
+        data = {v[0]:v[1] for i,v in enumerate(data_sorted) if i < extreme_count or i >= len(data_sorted)-extreme_count or v[0] in keep}
+        print('Graphing the following',[(k,v[-1:]) for k,v in data.items()])
+
+    marker = itertools.cycle((',', '+', '.', 'o', '*')) 
+    for country,y in data.items():
         x = range(len(y))
         _,formula = best_fit(x,y,expo,bounds=[0,0.9],label=country)
         label = '{}  {}'.format(country,formula)
-        ax.plot(x, y, c=COUNTRY_COLORS[country],label=label)
+        color = COUNTRY_COLORS[country] if country in COUNTRY_COLORS else numpy.random.rand(3,)
+        ax.plot(x, y, c=color,marker=next(marker),label=label)
 
     ax.set_xlabel('Days since at least {} cases in that country'.format(min_cases))
     ax.set_ylabel('Percent Population Infected')

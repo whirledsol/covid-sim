@@ -20,23 +20,14 @@ def start():
     PATH_C_US = os.path.join(PATH_BASE,'time_series_covid19_confirmed_US.csv')
     PATH_D_US = os.path.join(PATH_BASE,'time_series_covid19_deaths_US.csv')
 
-    CT_DATA_US = queryApi('https://covidtracking.com/api/v1/us/daily.json')
-
-    CT_DATA_STATES = queryApi('https://covidtracking.com/api/v1/states/daily.json')
-
     important_states = ['Pennsylvania','New Jersey']
 
+    crunch_zero_global(PATH_C_GLOBAL,population_threshold=3000000, extreme_count=6, keep=['US'])
+
     crunch_probability_county(PATH_C_US, 'Bucks','Pennsylvania')
+
     crunch_infectper_county(PATH_C_US, 'Bucks','Pennsylvania')
-    
 
-    crunch_perPositive_us(CT_DATA_US)
-    crunch_perPositive_us(CT_DATA_STATES,'Pennsylvania')
-    
-    #crunch_perOutcomes_us(CT_DATA_US)
-
-    #crunch_zero_global(PATH_C_GLOBAL)
-    
     crunch_new_county(PATH_C_US, 'Bucks','Pennsylvania','Confirmed')
     
     crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')    
@@ -50,6 +41,14 @@ def start():
     for state in important_states:
         crunch_map_per_county(PATH_C_US, state)
         crunch_deathrate_states(PATH_C_US,PATH_D_US,state)
+
+    
+    CT_DATA_US = queryApi('https://covidtracking.com/api/v1/us/daily.json')
+    CT_DATA_STATES = queryApi('https://covidtracking.com/api/v1/states/daily.json')
+    #crunch_perPositive_us(CT_DATA_STATES,'Pennsylvania')
+    #crunch_perPositive_us(CT_DATA_US)
+    #crunch_perOutcomes_us(CT_DATA_US)
+
 
 
 
