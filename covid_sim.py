@@ -22,12 +22,14 @@ def start():
 
     important_states = ['Pennsylvania','New Jersey']
 
-    crunch_zero_global(PATH_C_GLOBAL,population_threshold=3000000, extreme_count=6, keep=['US'])
+    #crunch_zero_global(PATH_C_GLOBAL,population_threshold=3000000, extreme_count=3, keep=['US','Denmark','United Kingdom'])
+    crunch_infectper_global(PATH_C_GLOBAL,'US')
+    crunch_infectper_county(PATH_C_US, 'Bucks','Pennsylvania')
+    crunch_infectper_global(PATH_C_GLOBAL, 'US')
+    crunch_infectper_county(PATH_C_US, 'Mercer','New Jersey')
+    crunch_infectper_county(PATH_C_US, 'Middlesex','New Jersey')
 
     crunch_probability_county(PATH_C_US, 'Bucks','Pennsylvania')
-
-    crunch_infectper_county(PATH_C_US, 'Bucks','Pennsylvania')
-
     crunch_new_county(PATH_C_US, 'Bucks','Pennsylvania','Confirmed')
     
     crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')    

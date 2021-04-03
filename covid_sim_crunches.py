@@ -148,6 +148,17 @@ def crunch_new_county(path,county,state,label):
     graph_new(x,y,f"{county}, {state}",label)
     plt.show()
 
+
+def crunch_infectper_global(path, country, days=14):
+    '''
+    Shows trend over time for one county
+    '''
+    x,y = parse_time_global(path,country)
+    population = COUNTRY_POPULATIONS[country] if country in COUNTRY_POPULATIONS else 1
+    title =f"Percentage of County Population Infected ({days} days)\n{country}"
+    graph_sum(x,y,title,date_range=days, normalize=lambda x: x/population)
+    plt.show()
+
 def crunch_infectper_county(path,county,state,days=14):
     '''
     Shows trend over time for one county
