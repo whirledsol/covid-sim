@@ -25,15 +25,15 @@ def start():
     #crunch_zero_global(PATH_C_GLOBAL,population_threshold=3000000, extreme_count=3, keep=['US','Denmark','United Kingdom'])
     crunch_infectper_global(PATH_C_GLOBAL,'US')
     crunch_infectper_county(PATH_C_US, 'Bucks','Pennsylvania')
-    crunch_infectper_global(PATH_C_GLOBAL, 'US')
     crunch_infectper_county(PATH_C_US, 'Mercer','New Jersey')
     crunch_infectper_county(PATH_C_US, 'Middlesex','New Jersey')
 
-    crunch_probability_county(PATH_C_US, 'Bucks','Pennsylvania')
     crunch_new_county(PATH_C_US, 'Bucks','Pennsylvania','Confirmed')
+    crunch_new_county(PATH_C_US, 'Mercer','New Jersey','Confirmed')
     
-    crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')    
-
+    #crunch_deathrate_global(PATH_C_GLOBAL,PATH_D_GLOBAL,'US')    
+    #crunch_probability_county(PATH_C_US, 'Bucks','Pennsylvania')
+    
     crunch_map_perpop_states(PATH_C_US)
 
     crunch_map_perpopnew_states(PATH_C_US)
@@ -42,7 +42,7 @@ def start():
     
     for state in important_states:
         crunch_map_per_county(PATH_C_US, state)
-        crunch_deathrate_states(PATH_C_US,PATH_D_US,state)
+        #crunch_deathrate_states(PATH_C_US,PATH_D_US,state)
 
     
     CT_DATA_US = queryApi('https://covidtracking.com/api/v1/us/daily.json')

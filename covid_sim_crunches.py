@@ -155,7 +155,7 @@ def crunch_infectper_global(path, country, days=14):
     '''
     x,y = parse_time_global(path,country)
     population = COUNTRY_POPULATIONS[country] if country in COUNTRY_POPULATIONS else 1
-    title =f"Percentage of County Population Infected ({days} days)\n{country}"
+    title =f"Percentage of Country Population Infected ({days} days)\n{country}"
     graph_sum(x,y,title,date_range=days, normalize=lambda x: x/population)
     plt.show()
 
